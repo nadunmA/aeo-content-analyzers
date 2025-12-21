@@ -7,7 +7,7 @@ const Footer = ({ onNavigate }) => {
   const [isVisible, setIsVisible] = useState(false);
   const footerRef = useRef(null);
 
-  // Show scroll to top button when user scrolls down
+  // Show scroll to top button when user scrolls downnn
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 300);
