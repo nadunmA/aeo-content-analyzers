@@ -37,7 +37,7 @@ public class GeminiService {
         headers.setContentType(MediaType.APPLICATION_JSON);
 
         //request body JSON
-        Map<String, Object> part = new HashMap<>();
+        Map<String, String> part = new HashMap<>();
         part.put("text", "Analyze this content and give a summary: " + text);
 
         Map<String, Object> content = new HashMap<>();
