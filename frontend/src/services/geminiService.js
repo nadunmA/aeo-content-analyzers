@@ -1,88 +1,43 @@
-import { GoogleGenAI, Type } from "@google/genai";
+const API_URL = "http://localhost:6060/api/content/analyze";
 
-const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY || '' });
+export const analyzeContent = async (inputValue, type) => {
 
-export const analyzeContent = async (content, type) => {
-  const prompt = `
-    Perform a comprehensive Answer Engine Optimization (AEO) audit on the following content.
-    Content: "${content}"
-    
-    Evaluate based on:
-    1. Directness of answers.
-    2. Use of structured data (Schema.org).
-    3. Clear Q&A formatting.
-    4. Key takeaway summaries.
-    5. Factual accuracy and citation readiness.
-
-    Return a JSON object matching this schema:
-    {
-      "score": { "total": number, "schema": number, "structure": number, "readability": number },
-      "audits": [ { "title": string, "status": "pass" | "fail" | "warning", "description": string } ],
-      "suggestions": [ { "type": "schema" | "qa" | "summary", "title": string, "code": string, "explanation": string } ]
-    }
-  `;
+  if(type == "url") {
+    throw new Error("URL Analysis feature is coming soon! Please try 'Text Analyzer' instead.");
+  }
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            score: {
-              type: Type.OBJECT,
-              properties: {
-                total: { type: Type.NUMBER },
-                schema: { type: Type.NUMBER },
-                structure: { type: Type.NUMBER },
-                readability: { type: Type.NUMBER },
-              },
-              required: ["total", "schema", "structure", "readability"]
-            },
-            audits: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  title: { type: Type.STRING },
-                  status: { type: Type.STRING },
-                  description: { type: Type.STRING },
-                },
-                required: ["title", "status", "description"]
-              }
-            },
-            suggestions: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  type: { type: Type.STRING },
-                  title: { type: Type.STRING },
-                  code: { type: Type.STRING },
-                  explanation: { type: Type.STRING },
-                },
-                required: ["type", "title", "code", "explanation"]
-              }
-            }
-          }
-        }
-      }
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({ text: inputValue }),
+
     });
 
-    const data = JSON.parse(response.text || '{}');
-    
+    if(!response.ok){
+      throw new Error("Server Error: Could not connect to Backend");
+    }
+
+    const jsonString = await response.text();
+
+    const data = JSON.parse(jsonString);
+
     return {
       id: Math.random().toString(36).substr(2, 9),
       timestamp: new Date().toISOString(),
-      title: type === 'url' ? content : (content.substring(0, 30) + "..."),
-      type,
-      content,
+      title: inputValue.substring(0, 30) + "...",
+      type: type,
+      content: inputValue,
+   
       ...data
     };
-  } catch (error) {
-    console.error("Gemini Analysis Error:", error);
+
+  }catch (error) {
+    console.error("API Service Error:", error);
     throw error;
   }
-};
+
+}
