@@ -5,21 +5,16 @@ import Results from "./pages/Results";
 import History from "./pages/History";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import FAQGenerator from "./pages/FAQGenerator";
 
 const App = () => {
   const [state, setState] = useState(() => {
-    const savedHistory = localStorage.getItem("aeo_history");
     return {
       currentPage: "landing",
       currentResult: null,
-      history: savedHistory ? JSON.parse(savedHistory) : [],
       isDark: window.matchMedia("(prefers-color-scheme: dark)").matches,
     };
   });
-
-  useEffect(() => {
-    localStorage.setItem("aeo_history", JSON.stringify(state.history));
-  }, [state.history]);
 
   useEffect(() => {
     if (state.isDark) {
@@ -31,6 +26,7 @@ const App = () => {
 
   const navigate = (page) =>
     setState((prev) => ({ ...prev, currentPage: page }));
+
   const toggleTheme = () =>
     setState((prev) => ({ ...prev, isDark: !prev.isDark }));
 
@@ -38,7 +34,6 @@ const App = () => {
     setState((prev) => ({
       ...prev,
       currentResult: result,
-      history: [result, ...prev.history],
       currentPage: "results",
     }));
   };
@@ -55,8 +50,10 @@ const App = () => {
     switch (state.currentPage) {
       case "landing":
         return <Landing onNavigate={navigate} />;
+
       case "analyzer":
         return <Analyzer onComplete={handleAnalysisComplete} />;
+
       case "results":
         return (
           <Results
@@ -64,14 +61,18 @@ const App = () => {
             onBack={() => navigate("analyzer")}
           />
         );
+
       case "history":
         return (
           <History
-            history={state.history}
             onView={viewHistoryResult}
             onBack={() => navigate("landing")}
           />
         );
+
+      case "tools":
+        return <FAQGenerator onBack={() => navigate("landing")} />;
+
       default:
         return <Landing onNavigate={navigate} />;
     }
@@ -79,7 +80,7 @@ const App = () => {
 
   return (
     <div
-      className={`min-h-screen transition-colors duration-300 ${
+      className={`min-h-screen transition-colors duration-300 flex flex-col ${
         state.isDark ? "bg-gray-950 text-gray-100" : "bg-gray-50 text-gray-900"
       }`}
     >
@@ -89,9 +90,11 @@ const App = () => {
         isDark={state.isDark}
         toggleTheme={toggleTheme}
       />
-      <main className="container mx-auto px-4 py-8 max-w-7xl">
+
+      <main className="container mx-auto px-4 py-8 max-w-7xl flex-grow">
         {renderPage()}
       </main>
+
       <Footer />
     </div>
   );

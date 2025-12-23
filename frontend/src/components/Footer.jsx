@@ -7,7 +7,7 @@ const Footer = ({ onNavigate }) => {
   const [isVisible, setIsVisible] = useState(false);
   const footerRef = useRef(null);
 
-  // Show scroll to top button when user scrolls downnn
+  // Show scroll to top button when user scrolls down
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 300);
@@ -104,6 +104,13 @@ const Footer = ({ onNavigate }) => {
     },
   ];
 
+  const navButtons = [
+    { id: "landing", label: "Home" },
+    { id: "analyzer", label: "Analyzer" },
+    { id: "history", label: "History" },
+    { id: "tools", label: "FAQ Generator" },
+  ];
+
   return (
     <>
       <footer
@@ -139,34 +146,23 @@ const Footer = ({ onNavigate }) => {
 
             {/* Navigation Buttons */}
             <div className="flex flex-wrap justify-center gap-3 mb-8">
-              {["landing", "analyzer", "faq"].map((page, idx) => {
-                const labels = {
-                  landing: "Home",
-                  analyzer: "Analyzer",
-                  faq: "FAQ",
-                };
-                return (
-                  <button
-                    key={page}
-                    onClick={() =>
-                      page === "faq"
-                        ? console.log("FAQ coming soon")
-                        : onNavigate?.(page)
-                    }
-                    className={`px-6 py-2.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-full font-medium text-sm text-gray-900 dark:text-white hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-lg hover:scale-105 transition-all active:scale-95 ${
-                      isVisible
-                        ? "opacity-100 translate-y-0"
-                        : "opacity-0 translate-y-4"
-                    }`}
-                    style={{
-                      transitionDelay: `${200 + idx * 100}ms`,
-                      transitionDuration: "700ms",
-                    }}
-                  >
-                    {labels[page]}
-                  </button>
-                );
-              })}
+              {navButtons.map((button, idx) => (
+                <button
+                  key={button.id}
+                  onClick={() => onNavigate?.(button.id)}
+                  className={`px-6 py-2.5 bg-white dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 rounded-full font-medium text-sm text-gray-900 dark:text-white hover:border-indigo-300 dark:hover:border-indigo-600 hover:shadow-lg hover:scale-105 transition-all active:scale-95 ${
+                    isVisible
+                      ? "opacity-100 translate-y-0"
+                      : "opacity-0 translate-y-4"
+                  }`}
+                  style={{
+                    transitionDelay: `${200 + idx * 100}ms`,
+                    transitionDuration: "700ms",
+                  }}
+                >
+                  {button.label}
+                </button>
+              ))}
             </div>
 
             {/* Social Links */}

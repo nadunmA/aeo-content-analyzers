@@ -24,6 +24,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
   const navItems = [
     { id: "landing", label: "Home" },
     { id: "analyzer", label: "Analyze" },
+    { id: "tools", label: "Tools" },
     { id: "history", label: "History" },
   ];
 
