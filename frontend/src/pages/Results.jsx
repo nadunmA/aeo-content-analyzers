@@ -2,6 +2,136 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import { Icons } from "../constants";
 
+// Comparison Component - defined outside to allow PropTypes
+const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
+  const scoreDiff = topRanking - yourScore;
+  const vsIndustry = yourScore - industryAverage;
+
+  return (
+    <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
+      <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
+        📊 Competitive Analysis
+      </h3>
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-4">
+          <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Your Content
+          </span>
+          <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+            <div
+              className="h-full bg-indigo-600 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
+              style={{ width: `${yourScore}%` }}
+            >
+              {yourScore}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Top Ranking
+          </span>
+          <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+            <div
+              className="h-full bg-emerald-500 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
+              style={{ width: `${topRanking}%` }}
+            >
+              {topRanking}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
+            Industry Avg
+          </span>
+          <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+            <div
+              className="h-full bg-gray-400 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
+              style={{ width: `${industryAverage}%` }}
+            >
+              {industryAverage}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Gap Analysis */}
+      <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
+        <div className="flex items-start gap-3">
+          <Icons.AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-semibold text-amber-900 dark:text-amber-200 mb-1">
+              Performance Gap
+            </p>
+            <p className="text-sm text-amber-700 dark:text-amber-300">
+              {scoreDiff > 0 ? (
+                <>
+                  You're <span className="font-bold">{scoreDiff} points</span>{" "}
+                  behind the top-ranking page.
+                  {vsIndustry > 0 && (
+                    <>
+                      {" "}
+                      However, you're{" "}
+                      <span className="font-bold">
+                        {vsIndustry} points above
+                      </span>{" "}
+                      industry average!
+                    </>
+                  )}
+                </>
+              ) : (
+                <>
+                  🎉 Excellent! You're{" "}
+                  <span className="font-bold">matching or exceeding</span>{" "}
+                  top-ranking content!
+                </>
+              )}
+            </p>
+            {scoreDiff > 0 && (
+              <button className="mt-3 text-xs font-bold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline">
+                See what they're doing better →
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Insights */}
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Your Position
+          </p>
+          <p className="text-lg font-bold text-gray-900 dark:text-white">
+            {yourScore >= topRanking
+              ? "🥇 #1"
+              : yourScore >= industryAverage
+              ? "📈 Above Avg"
+              : "📊 Below Avg"}
+          </p>
+        </div>
+        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+            Improvement Potential
+          </p>
+          <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
+            +{Math.max(0, 100 - yourScore)} pts
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// PropTypes for ComparisonSection
+ComparisonSection.propTypes = {
+  yourScore: PropTypes.number.isRequired,
+  industryAverage: PropTypes.number.isRequired,
+  topRanking: PropTypes.number.isRequired,
+};
+
 const Results = ({ result, onBack }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
 
@@ -266,6 +396,13 @@ const Results = ({ result, onBack }) => {
 
         {/* Right Column: Detailed Audit */}
         <div className="lg:col-span-2 space-y-8">
+          {/* Competitive Analysis */}
+          <ComparisonSection
+            yourScore={result.score.total}
+            industryAverage={result.comparison?.industryAverage || 68}
+            topRanking={result.comparison?.topRanking || 92}
+          />
+
           {/* Audit Report */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/20 dark:to-violet-950/20">
@@ -395,6 +532,12 @@ Results.propTypes = {
       structure: PropTypes.number.isRequired,
       readability: PropTypes.number.isRequired,
     }).isRequired,
+    comparison: PropTypes.shape({
+      yourScore: PropTypes.number,
+      topRanking: PropTypes.number,
+      industryAverage: PropTypes.number,
+      position: PropTypes.string,
+    }),
     audits: PropTypes.arrayOf(
       PropTypes.shape({
         title: PropTypes.string.isRequired,
