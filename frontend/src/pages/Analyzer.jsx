@@ -49,6 +49,10 @@ const Analyzer = ({ onComplete }) => {
   }, []);
 
   const handleAnalyze = async () => {
+    // Clear previous errors
+    setError("");
+
+    // Empty check
     if (!inputValue.trim()) {
       setError(
         "Please enter a valid " + (activeTab === "url" ? "URL" : "content")
@@ -56,6 +60,7 @@ const Analyzer = ({ onComplete }) => {
       return;
     }
 
+    // URL-specific validation
     if (activeTab === "url") {
       try {
         new URL(inputValue);
@@ -65,26 +70,48 @@ const Analyzer = ({ onComplete }) => {
       }
     }
 
-    if (activeTab === "text" && inputValue.length < 50) {
-      setError("Content must be at least 50 characters long");
-      return;
+    // Text-specific validation
+    if (activeTab === "text") {
+      if (inputValue.length < 50) {
+        setError("Content must be at least 50 characters long");
+        return;
+      }
+      if (inputValue.length > 100000) {
+        setError("Content is too large (max 100,000 characters)");
+        return;
+      }
     }
 
-    setError("");
+    // Start loading
     setIsLoading(true);
 
+    // Loading message progression
     const timeouts = loadingSteps.map((step) =>
       setTimeout(() => setLoadingMsg(step.message), step.delay)
     );
 
     try {
+      // Call API
       const result = await analyzeContent(inputValue, activeTab);
+
+      // Clear timeouts
       timeouts.forEach(clearTimeout);
+
+      // 8. Pass result to parent
       onComplete(result);
     } catch (err) {
+      // lear timeouts on error
       timeouts.forEach(clearTimeout);
+
       console.error("Analysis error:", err);
-      setError("Analysis failed. Please try again or check your connection.");
+
+      // Show user-friendly error
+      setError(
+        err.message ||
+          "Analysis failed. Please try again or check your connection."
+      );
+
+      // Stop loading
       setIsLoading(false);
     }
   };
