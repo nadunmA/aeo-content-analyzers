@@ -12,4 +12,5 @@ public class AnalyzeRequest {
 
     @NotBlank(message = "Text cannot be empty")
     private String text;
+    private String type;
 }

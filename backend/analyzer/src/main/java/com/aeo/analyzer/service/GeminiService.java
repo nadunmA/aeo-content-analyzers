@@ -2,13 +2,13 @@ package com.aeo.analyzer.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.ResourceAccessException;
 
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +16,8 @@ import java.util.Map;
 
 @Service
 public class GeminiService {
+
+    private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
 
     @Value("${gemini.api.url}")
     private String apiUrl;
@@ -26,85 +28,112 @@ public class GeminiService {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
-    public GeminiService() {
-        this.restTemplate = new RestTemplate();
-        this.objectMapper = new ObjectMapper();
+    public GeminiService(RestTemplate restTemplate, ObjectMapper objectMapper) {
+        this.restTemplate = restTemplate;
+        this.objectMapper = objectMapper;
     }
 
     public String analyzeContent(String text) {
-        String url = apiUrl + "?key=" + apiKey;
+        String fullUrl = apiUrl + "?key=" + apiKey;
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        //AEO Prompt
-        String prompt = """
-            Perform a comprehensive Answer Engine Optimization (AEO) audit on the following content.
-            Content: "%s"
+        // Limit content to 15,000 chars to prevent timeouts/errors
+        String limitedText = text.substring(0, Math.min(text.length(), 15000));
+
+        String finalPrompt = """
+            You are an expert in Answer Engine Optimization (AEO).
+            Perform a comprehensive audit on the provided content below.
             
-            Evaluate based on:
-            1. Directness of answers.
-            2. Use of structured data (Schema.org).
-            3. Clear Q&A formatting.
-            4. Key takeaway summaries.
-            5. Factual accuracy and citation readiness.
-
-            Return a strict JSON object matching this schema (do not use markdown formatting like ```json):
+            Return ONLY a valid JSON object with this exact structure (No Markdown, No code blocks, just raw JSON):
             {
-              "score": { "total": number, "schema": number, "structure": number, "readability": number },
-              "audits": [ { "title": string, "status": "pass" | "fail" | "warning", "description": string } ],
-              "suggestions": [ { "type": "schema" | "qa" | "summary", "title": string, "code": string, "explanation": string } ]
+              "score": { "total": 0-100, "schema": 0-100, "structure": 0-100, "readability": 0-100 },
+              "comparison": { "topRanking": 90, "industryAverage": 65 },
+              "audits": [ { "title": "string", "status": "pass|warning|fail", "description": "string" } ],
+              "suggestions": [ { "type": "schema|qa|summary|content", "title": "string", "explanation": "string", "code": "string example" } ]
             }
-        """.formatted(text.replace("\"", "\\\""));
 
-        //Request JSON Structure
-        Map<String, Object> part = new HashMap<>();
-        part.put("text", prompt);
+            CONTENT TO ANALYZE:
+            ===================
+            %s
+            ===================
+            """.formatted(limitedText);
 
-        Map<String, Object> content = new HashMap<>();
-        content.put("parts", List.of(part));
-
-        //Generation Config
-        Map<String, Object> generationConfig = new HashMap<>();
-        generationConfig.put("responseMimeType", "application/json");
+        Map<String, Object> part = Map.of("text", finalPrompt);
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("contents", List.of(content));
-        requestBody.put("generationConfig", generationConfig);
+        requestBody.put("contents", List.of(
+                Map.of("parts", List.of(part))
+        ));
+
+        requestBody.put("generationConfig", Map.of(
+                "responseMimeType", "application/json",
+                "temperature", 0.4,
+                "maxOutputTokens", 5000
+        ));
 
         HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
         try {
-            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
+            log.info("Calling Gemini API for AEO analysis (Input length: {})", limitedText.length());
+            ResponseEntity<String> response = restTemplate.postForEntity(fullUrl, entity, String.class);
 
-            if (response.getBody() == null) {
-                return "{}";
+            if (response.getBody() == null || response.getBody().trim().isEmpty()) {
+                log.warn("Empty response from Gemini API");
+                return getFallbackJson();
             }
 
-            JsonNode rootNode = objectMapper.readTree(response.getBody());
-
-            // 4. Extract Text and Clean it
-            String responseText = rootNode.path("candidates")
+            JsonNode root = objectMapper.readTree(response.getBody());
+            String responseText = root.path("candidates")
                     .path(0)
                     .path("content")
                     .path("parts")
                     .path(0)
                     .path("text")
-                    .asText();
+                    .asText("");
 
+            if (responseText.isBlank()) {
+                log.warn("No text content in Gemini response");
+                return getFallbackJson();
+            }
 
-            return responseText.replace("```json", "").replace("```", "").trim();
+            // CLEANING LOGIC
+            String cleaned = responseText
+                    .trim()
+                    .replaceAll("^```json", "")
+                    .replaceAll("^```", "")
+                    .replaceAll("```$", "")
+                    .trim();
 
+            // Validation with Logging
+            if (!cleaned.startsWith("{") || !cleaned.endsWith("}")) {
+                log.warn("⚠️ Gemini returned invalid JSON. Response was: {}", responseText); // This helps debug!
+                return getFallbackJson();
+            }
+
+            log.info("Gemini analysis successful!");
+            return cleaned;
+
+        } catch (ResourceAccessException e) {
+            log.error("Gemini API timeout or connection error: {}", e.getMessage());
+            return getFallbackJson();
         } catch (Exception e) {
-            e.printStackTrace();
-
-            return """
-                {
-                    "score": { "total": 0, "schema": 0, "structure": 0, "readability": 0 },
-                    "audits": [ { "title": "Error", "status": "fail", "description": "Analysis failed due to server error." } ],
-                    "suggestions": []
-                }
-            """;
+            log.error("Unexpected error calling Gemini API: {}", e.getMessage(), e);
+            return getFallbackJson();
         }
+    }
+
+    private String getFallbackJson() {
+        return """
+            {
+              "score": { "total": 0, "schema": 0, "structure": 0, "readability": 0 },
+              "comparison": { "topRanking": 0, "industryAverage": 0 },
+              "audits": [
+                { "title": "Service Unavailable", "status": "fail", "description": "AI Service is currently offline. Please try again later." }
+              ],
+              "suggestions": []
+            }
+            """;
     }
 }
