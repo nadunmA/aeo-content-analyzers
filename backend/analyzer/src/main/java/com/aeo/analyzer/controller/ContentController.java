@@ -25,7 +25,7 @@ import java.util.Map;
 @RequestMapping("/api/content")
 @SuppressWarnings("unchecked")
 @CrossOrigin(
-        origins = {"http://localhost:3000", "http://localhost:5173"},//connect with frontend
+        origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:2000"},//connect with frontend
         methods = {RequestMethod.POST, RequestMethod.GET, RequestMethod.DELETE},
         allowedHeaders = "*",
         maxAge = 3600
