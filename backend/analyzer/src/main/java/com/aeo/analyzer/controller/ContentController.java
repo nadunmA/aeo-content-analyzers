@@ -13,6 +13,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.fasterxml.jackson.core.type.TypeReference;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Map;
@@ -97,8 +100,12 @@ public class ContentController {
 
     //Get history
     @GetMapping("/history")
-    public ResponseEntity<List<AuditReport>> getHistory() {
-        return ResponseEntity.ok(repository.findAllByOrderByCreatedAtDesc());
+    public ResponseEntity<Page<AuditReport>> getHistory(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size
+    ) {
+        Pageable pageable = PageRequest.of(page, size);
+        return ResponseEntity.ok(repository.findAllByOrderByCreatedAtDesc(pageable));
     }
 
     //Get single report by id
