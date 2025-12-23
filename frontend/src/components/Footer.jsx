@@ -107,8 +107,10 @@ const Footer = ({ onNavigate }) => {
   const navButtons = [
     { id: "landing", label: "Home" },
     { id: "analyzer", label: "Analyzer" },
-    { id: "history", label: "History" },
     { id: "tools", label: "FAQ Generator" },
+    { id: "history", label: "History" },
+
+    { id: "news", label: "News" },
   ];
 
   return (

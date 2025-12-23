@@ -26,6 +26,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
     { id: "analyzer", label: "Analyze" },
     { id: "tools", label: "Tools" },
     { id: "history", label: "History" },
+    { id: "news", label: "News" },
   ];
 
   const getNavButtonClass = (pageId) => {

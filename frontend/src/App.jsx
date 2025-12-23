@@ -6,6 +6,7 @@ import History from "./pages/History";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import FAQGenerator from "./pages/FAQGenerator";
+import News from "./pages/News";
 
 const App = () => {
   const [state, setState] = useState(() => {
@@ -72,6 +73,9 @@ const App = () => {
 
       case "tools":
         return <FAQGenerator onBack={() => navigate("landing")} />;
+
+      case "news":
+        return <News onBack={() => navigate("landing")} />;
 
       default:
         return <Landing onNavigate={navigate} />;

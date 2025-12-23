@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { Icons } from "../constants";
 
 const FAQGenerator = ({ onBack }) => {
   const [faqs, setFaqs] = useState([{ question: "", answer: "" }]);
@@ -123,21 +124,11 @@ const FAQGenerator = ({ onBack }) => {
       >
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-6 group"
+          className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors mb-3 group font-normal"
         >
-          <svg
-            className="w-4 h-4 group-hover:-translate-x-1 transition-transform"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M15 19l-7-7 7-7"
-            />
-          </svg>
+          <span className="rotate-180 group-hover:-translate-x-1 transition-transform">
+            <Icons.ArrowRight />
+          </span>
           Back to Home
         </button>
 
