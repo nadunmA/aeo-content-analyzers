@@ -34,6 +34,7 @@ public class AuditReport {
     private Map<String, Object> score;
     private List<Map<String, Object>> audits;
     private List<Map<String, Object>> suggestions;
+    private Map<String, Object> comparison;
 
     @Indexed
     private LocalDateTime createdAt;

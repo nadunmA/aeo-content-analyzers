@@ -55,12 +55,8 @@ public class ContentController {
         try {
             //call gemini service
             String geminiJson = geminiService.analyzeContent(request.getText());
-
-            //json string
-            Map<String, Object> result = objectMapper.readValue(
-                    geminiJson,
-                    new TypeReference<Map<String, Object>>() {}
-            );
+            Map<String, Object> result = objectMapper.readValue(geminiJson,
+                    new TypeReference<Map<String, Object>>() {});
 
             //create report object
             AuditReport report = new AuditReport();
@@ -82,6 +78,9 @@ public class ContentController {
             }
             if(result.containsKey("suggestions")) {
                 report.setSuggestions((List<Map<String, Object>>) result.get("suggestions"));
+            }
+            if(result.containsKey("comparison")) {
+                report.setComparison((Map<String, Object>) result.get("comparison"));
             }
 
             //save db
