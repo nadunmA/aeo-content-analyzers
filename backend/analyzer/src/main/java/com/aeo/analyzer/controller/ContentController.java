@@ -1,11 +1,12 @@
 package com.aeo.analyzer.controller;
 
+import com.aeo.analyzer.service.ModelRouterService;
 import com.aeo.analyzer.service.WebScraperService;
 import lombok.extern.slf4j.Slf4j;
 import com.aeo.analyzer.dto.AnalyzeRequest;
 import com.aeo.analyzer.model.AuditReport;
 import com.aeo.analyzer.repository.AuditReportRepository;
-import com.aeo.analyzer.service.GeminiService;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -32,18 +33,20 @@ import java.util.Map;
 )
 public class ContentController {
 
-    private final GeminiService geminiService;
+    private final ModelRouterService modelRouterService;
+    //private final GeminiService geminiService;
     private final AuditReportRepository repository;
     private final ObjectMapper objectMapper;
     private final WebScraperService webScraperService;
 
 
     //service connect controller (dependency injection)
-    public ContentController(GeminiService geminiService, AuditReportRepository repository, ObjectMapper objectMapper, WebScraperService webScraperService) {
-        this.geminiService = geminiService;
+    public ContentController(AuditReportRepository repository, ObjectMapper objectMapper, WebScraperService webScraperService, ModelRouterService modelRouterService) {
+        //this.geminiService = geminiService;
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.webScraperService = webScraperService;
+        this.modelRouterService = modelRouterService;
     }
 
     @PostMapping("/analyze")
@@ -71,10 +74,11 @@ public class ContentController {
             }
 
             //Call Gemini Service with the actual content
-            String geminiJson = geminiService.analyzeContent(contentToAnalyze);
+            //String geminiJson = geminiService.analyzeContent(contentToAnalyze);
+            String aiJson = modelRouterService.analyzeWithFailover(contentToAnalyze);
 
             //Clean Gemini Response
-            String cleanedJson = geminiJson.trim();
+            String cleanedJson = aiJson.trim();
             if (cleanedJson.startsWith("```json")) {
                 cleanedJson = cleanedJson.substring(7);
             } else if (cleanedJson.startsWith("```")) {
@@ -86,7 +90,8 @@ public class ContentController {
             cleanedJson = cleanedJson.trim();
 
             //Configure Mapper for safety
-            objectMapper.configure(com.fasterxml.jackson.core.JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
+            //objectMapper.configure(JsonReadFeature.ALLOW_UNQUOTED_CONTROL_CHARS.mappedFeature(), true);
+            objectMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
 
             Map<String, Object> result = objectMapper.readValue(cleanedJson,
                     new TypeReference<Map<String, Object>>() {});

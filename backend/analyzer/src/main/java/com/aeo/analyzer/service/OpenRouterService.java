@@ -30,14 +30,14 @@ public class OpenRouterService {
         this.objectMapper = objectMapper;
     }
 
-    // modelName එක අපි එළියෙන් පාස් කරනවා (උදා: "openai/gpt-4o-mini")
+
     public String analyzeContent(String text, String modelName) throws Exception {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("Authorization", "Bearer " + apiKey);
 
-        // Content Limit (Safety)
+        // Content Limit
         String limitedText = text.substring(0, Math.min(text.length(), 15000));
 
         // Prompt Logic
