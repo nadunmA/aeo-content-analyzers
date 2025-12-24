@@ -28,21 +28,17 @@ import java.util.Map;
 @CrossOrigin(
         origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:2000"},//connect with frontend
         methods = {RequestMethod.POST, RequestMethod.GET, RequestMethod.DELETE},
-        allowedHeaders = "*",
+        allowedHeaders = {"Content-Type", "Authorization", "X-Requested-With"},
         maxAge = 3600
 )
 public class ContentController {
 
     private final ModelRouterService modelRouterService;
-    //private final GeminiService geminiService;
     private final AuditReportRepository repository;
     private final ObjectMapper objectMapper;
     private final WebScraperService webScraperService;
 
-
-    //service connect controller (dependency injection)
     public ContentController(AuditReportRepository repository, ObjectMapper objectMapper, WebScraperService webScraperService, ModelRouterService modelRouterService) {
-        //this.geminiService = geminiService;
         this.repository = repository;
         this.objectMapper = objectMapper;
         this.webScraperService = webScraperService;
@@ -53,67 +49,69 @@ public class ContentController {
     public ResponseEntity<Object> analyze(
             @Valid @RequestBody AnalyzeRequest request,
             HttpServletRequest httpServletRequest) {
-
         String clientIp = httpServletRequest.getRemoteAddr();
         log.info("Analysis request from IP: {}", clientIp);
-
         try {
-            //Determine Content Source (URL or Text)
             String contentToAnalyze = request.getText();
             String requestType = request.getType() != null ? request.getType() : "text";
-
+            String extractedTitle = null;
 
             if ("url".equalsIgnoreCase(requestType)) {
                 log.info("Scraping URL: {}", request.getText());
-                contentToAnalyze = webScraperService.scrapeUrl(request.getText());
-
-
+                try {
+                    contentToAnalyze = webScraperService.scrapeUrl(request.getText());
+                    extractedTitle = webScraperService.extractTitleFromUrl(request.getText());
+                    log.info("Extracted title: {}", extractedTitle);
+                } catch (Exception e) {
+                    log.error("Scraping failed: {}", e.getMessage());
+                    throw e;
+                }
                 if (contentToAnalyze.length() > 20000) {
                     contentToAnalyze = contentToAnalyze.substring(0, 20000);
                 }
             }
 
-            //Call Gemini Service with the actual content
-            //String geminiJson = geminiService.analyzeContent(contentToAnalyze);
             String aiJson = modelRouterService.analyzeWithFailover(contentToAnalyze);
 
-            //Clean Gemini Response
-            String cleanedJson = aiJson.trim();
-            if (cleanedJson.startsWith("```json")) {
-                cleanedJson = cleanedJson.substring(7);
-            } else if (cleanedJson.startsWith("```")) {
-                cleanedJson = cleanedJson.substring(3);
-            }
-            if (cleanedJson.endsWith("```")) {
-                cleanedJson = cleanedJson.substring(0, cleanedJson.length() - 3);
-            }
-            cleanedJson = cleanedJson.trim();
+            // 👇 IMPROVED JSON CLEANER (Regex Based)
+            String cleanedJson = aiJson;
+            // 1. Find the first '{' and the last '}'
+            int firstBrace = aiJson.indexOf("{");
+            int lastBrace = aiJson.lastIndexOf("}");
 
-            //Configure Mapper for safety
-            //objectMapper.configure(JsonReadFeature.ALLOW_UNQUOTED_CONTROL_CHARS.mappedFeature(), true);
+            if (firstBrace != -1 && lastBrace != -1 && firstBrace < lastBrace) {
+                cleanedJson = aiJson.substring(firstBrace, lastBrace + 1);
+            } else {
+                // JSON structure not found
+                throw new RuntimeException("AI Response did not contain valid JSON object");
+            }
+            // ⬆️ END IMPROVEMENT
+
+            // Log for debugging (Optional)
+            // log.info("Final JSON to parse: {}", cleanedJson);
+
             objectMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
-
             Map<String, Object> result = objectMapper.readValue(cleanedJson,
                     new TypeReference<Map<String, Object>>() {});
 
-
             AuditReport report = new AuditReport();
-
-
             String title;
             if ("url".equalsIgnoreCase(requestType)) {
-                title = request.getText();
+                if (extractedTitle != null && !extractedTitle.equals("Untitled Article")) {
+                    title = extractedTitle;
+                } else {
+                    title = request.getText();
+                }
             } else {
-                title = request.getText().length() > 50 ? request.getText().substring(0, 50) + "..." : request.getText();
+                title = request.getText().length() > 50
+                        ? request.getText().substring(0, 50) + "..."
+                        : request.getText();
             }
-
             report.setTitle(title);
             report.setUrlOrText(request.getText());
-            report.setType(requestType); // "url" or "text"
+            report.setType(requestType);
             report.setStatus("completed");
             report.setIpAddress(clientIp);
-
-            //Add Analysis Data
             if(result.containsKey("score")) {
                 report.setScore((Map<String, Object>) result.get("score"));
             }
@@ -123,27 +121,25 @@ public class ContentController {
             if(result.containsKey("suggestions")) {
                 report.setSuggestions((List<Map<String, Object>>) result.get("suggestions"));
             }
-
             if(result.containsKey("comparison")) {
                 report.setComparison((Map<String, Object>) result.get("comparison"));
             } else {
                 report.setComparison(Map.of("topRanking", 92, "industryAverage", 68));
             }
-
-            //Save to DB
             AuditReport savedReport = repository.save(report);
             log.info("Report saved with ID: {}", savedReport.getId());
-
             return ResponseEntity.ok(savedReport);
-
         } catch (Exception e) {
             log.error("Analysis failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Analysis failed", "message", e.getMessage()));
+                    .body(Map.of(
+                            "error", "Analysis failed",
+                            "message", e.getMessage(),
+                            "details", e.getClass().getSimpleName()
+                    ));
         }
     }
 
-    //Get history
     @GetMapping("/history")
     public ResponseEntity<Page<AuditReport>> getHistory(
             @RequestParam(defaultValue = "0") int page,
@@ -153,7 +149,6 @@ public class ContentController {
         return ResponseEntity.ok(repository.findAllByOrderByCreatedAtDesc(pageable));
     }
 
-    //Get single report by id
     @GetMapping("/report/{id}")
     public ResponseEntity<AuditReport> getReport(@PathVariable String id) {
         return repository.findById(id)
@@ -161,7 +156,6 @@ public class ContentController {
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    //delete report by id
     @DeleteMapping("/report/{id}")
     public ResponseEntity<Map<String, String>> deleteReport(@PathVariable String id) {
         if(!repository.existsById(id)) {
@@ -171,7 +165,6 @@ public class ContentController {
         return ResponseEntity.ok(Map.of("message", "Report deleted successfully"));
     }
 
-    //health check
     @GetMapping("/health")
     public ResponseEntity<Map<String, String>> health() {
         return ResponseEntity.ok(Map.of("status", "UP", "timestamp", java.time.LocalDateTime.now().toString()));

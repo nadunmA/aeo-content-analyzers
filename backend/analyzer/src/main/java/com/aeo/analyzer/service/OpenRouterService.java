@@ -30,7 +30,6 @@ public class OpenRouterService {
         this.objectMapper = objectMapper;
     }
 
-
     public String analyzeContent(String text, String modelName) throws Exception {
 
         HttpHeaders headers = new HttpHeaders();
@@ -40,16 +39,48 @@ public class OpenRouterService {
         // Content Limit
         String limitedText = text.substring(0, Math.min(text.length(), 15000));
 
-        // Prompt Logic
+        // Improved Prompt with detailed structure
         String prompt = """
             You are an AEO (Answer Engine Optimization) expert. 
-            Analyze the following content and return a strict JSON response.
-            Content: %s
+            Analyze the following content for SEO, readability, and technical aspects.
+            Return ONLY a strict JSON object with this exact structure:
+            {
+              "score": {
+                "total": <integer 0-100>,
+                "seo": <integer 0-100>,
+                "readability": <integer 0-100>,
+                "technical": <integer 0-100>
+              },
+              "audits": [
+                {
+                  "title": "<string>",
+                  "status": "<pass|fail|warn>",
+                  "description": "<string>"
+                },
+                ... more audits
+              ],
+              "suggestions": [
+                {
+                  "priority": "<high|medium|low>",
+                  "category": "<seo|readability|technical>",
+                  "description": "<string>",
+                  "impact": "<string>"
+                },
+                ... more suggestions
+              ],
+              "comparison": {
+                "topRanking": <integer 0-100>,
+                "industryAverage": <integer 0-100>
+              }
+            }
+            Do not include any extra text, explanations, or markdown outside the JSON.
+            Content to analyze: %s
             """.formatted(limitedText);
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", modelName);
         requestBody.put("messages", List.of(
+                Map.of("role", "system", "content", "You are a helpful assistant."),
                 Map.of("role", "user", "content", prompt)
         ));
 
