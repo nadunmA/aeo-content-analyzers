@@ -420,7 +420,10 @@ const Results = ({ result, onBack }) => {
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {(result.audits || []).map((audit, idx) => {
-                const config = statusConfig[audit.status] || statusConfig.fail;
+                const normalizedStatus =
+                  audit.status === "warn" ? "warning" : audit.status;
+                const config =
+                  statusConfig[normalizedStatus] || statusConfig.fail;
                 return (
                   <div
                     key={idx}
@@ -506,7 +509,20 @@ const Results = ({ result, onBack }) => {
                     <div className="relative group/code">
                       <pre className="p-6 bg-slate-50 dark:bg-gray-950 text-slate-700 dark:text-indigo-300 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-x-auto text-xs font-mono leading-relaxed shadow-inner">
                         <code>
-                          {sug.code || "// No code suggestion available"}
+                          {sug.code &&
+                            sug.code !== "null" &&
+                            !sug.code.includes("No specific code") && (
+                              <div className="relative group/code mt-4">
+                                <pre className="p-6 bg-slate-50 dark:bg-gray-950 text-slate-700 dark:text-indigo-300 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-x-auto text-xs font-mono leading-relaxed shadow-inner">
+                                  <code>{sug.code}</code>
+                                </pre>
+                                <div className="absolute top-4 right-4 opacity-0 group-hover/code:opacity-100 transition-opacity">
+                                  <span className="text-[10px] bg-slate-200 dark:bg-gray-800 px-2.5 py-1 rounded-md text-slate-600 dark:text-gray-400 uppercase font-bold tracking-wider shadow-sm">
+                                    {sug.type || "general"}
+                                  </span>
+                                </div>
+                              </div>
+                            )}
                         </code>
                       </pre>
                       <div className="absolute top-4 right-4 opacity-0 group-hover/code:opacity-100 transition-opacity">
@@ -546,7 +562,8 @@ Results.propTypes = {
       PropTypes.shape({
         title: PropTypes.string,
         description: PropTypes.string,
-        status: PropTypes.oneOf(["pass", "warning", "fail"]),
+        //status: PropTypes.oneOf(["pass", "warning", "fail"]),
+        status: PropTypes.oneOf(["pass", "warning", "fail", "warn"]).isRequired,
       })
     ),
     suggestions: PropTypes.arrayOf(
