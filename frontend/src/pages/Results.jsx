@@ -2,7 +2,7 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import { Icons } from "../constants";
 
-// Comparison Component - defined outside to allow PropTypes
+// Comparison Component
 const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
   const scoreDiff = topRanking - yourScore;
   const vsIndustry = yourScore - industryAverage;
@@ -14,6 +14,7 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
       </h3>
 
       <div className="space-y-4">
+        {/* Your Score Bar */}
         <div className="flex items-center gap-4">
           <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
             Your Content
@@ -21,13 +22,14 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
           <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
             <div
               className="h-full bg-indigo-600 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
-              style={{ width: `${yourScore}%` }}
+              style={{ width: `${Math.min(yourScore, 100)}%` }}
             >
               {yourScore}
             </div>
           </div>
         </div>
 
+        {/* Top Ranking Bar */}
         <div className="flex items-center gap-4">
           <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
             Top Ranking
@@ -35,13 +37,14 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
           <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
             <div
               className="h-full bg-emerald-500 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
-              style={{ width: `${topRanking}%` }}
+              style={{ width: `${Math.min(topRanking, 100)}%` }}
             >
               {topRanking}
             </div>
           </div>
         </div>
 
+        {/* Industry Average Bar */}
         <div className="flex items-center gap-4">
           <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
             Industry Avg
@@ -49,7 +52,7 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
           <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
             <div
               className="h-full bg-gray-400 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
-              style={{ width: `${industryAverage}%` }}
+              style={{ width: `${Math.min(industryAverage, 100)}%` }}
             >
               {industryAverage}
             </div>
@@ -57,7 +60,7 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
         </div>
       </div>
 
-      {/* Gap Analysis */}
+      {/* Gap Analysis Text */}
       <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
         <div className="flex items-start gap-3">
           <Icons.AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
@@ -89,36 +92,7 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
                 </>
               )}
             </p>
-            {scoreDiff > 0 && (
-              <button className="mt-3 text-xs font-bold text-amber-700 dark:text-amber-300 hover:text-amber-900 dark:hover:text-amber-100 underline">
-                See what they're doing better →
-              </button>
-            )}
           </div>
-        </div>
-      </div>
-
-      {/* Quick Insights */}
-      <div className="mt-4 grid grid-cols-2 gap-3">
-        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-            Your Position
-          </p>
-          <p className="text-lg font-bold text-gray-900 dark:text-white">
-            {yourScore >= topRanking
-              ? "🥇 #1"
-              : yourScore >= industryAverage
-              ? "📈 Above Avg"
-              : "📊 Below Avg"}
-          </p>
-        </div>
-        <div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
-          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
-            Improvement Potential
-          </p>
-          <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">
-            +{Math.max(0, 100 - yourScore)} pts
-          </p>
         </div>
       </div>
     </div>
@@ -131,11 +105,13 @@ ComparisonSection.propTypes = {
   topRanking: PropTypes.number.isRequired,
 };
 
+// Main Results Component
 const Results = ({ result, onBack }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
 
   if (!result) return null;
 
+  // Helper Functions
   const getScoreColor = (score) => {
     if (score >= 80) return "text-emerald-500";
     if (score >= 50) return "text-amber-500";
@@ -169,6 +145,7 @@ const Results = ({ result, onBack }) => {
   };
 
   const copyToClipboard = async (text, index) => {
+    if (!text) return;
     try {
       await navigator.clipboard.writeText(text);
       setCopiedIndex(index);
@@ -178,7 +155,7 @@ const Results = ({ result, onBack }) => {
     }
   };
 
-  // FIXED: Use safe access with fallbacks for different backend field names
+  // Safe Data Access
   const schemaScore = result?.score?.schema ?? result?.score?.seo ?? 0;
   const structureScore =
     result?.score?.structure ?? result?.score?.technical ?? 0;
@@ -225,7 +202,10 @@ const Results = ({ result, onBack }) => {
 
   const auditSummary = {
     passed: result.audits?.filter((a) => a.status === "pass").length ?? 0,
-    warnings: result.audits?.filter((a) => a.status === "warning").length ?? 0,
+    warnings:
+      result.audits?.filter(
+        (a) => a.status === "warning" || a.status === "warn"
+      ).length ?? 0,
     failed: result.audits?.filter((a) => a.status === "fail").length ?? 0,
   };
 
@@ -246,15 +226,11 @@ const Results = ({ result, onBack }) => {
           <h2 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2">
             Analysis Report
           </h2>
-          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-2xl">
+          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-2xl truncate">
             {result.title || "Untitled Report"}
           </p>
         </div>
         <div className="flex gap-3">
-          <button className="px-5 py-2.5 border-2 border-gray-200 dark:border-gray-800 rounded-xl text-sm font-bold flex items-center gap-2 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-700 transition-all">
-            <Icons.FileText className="w-4 h-4" />
-            Export PDF
-          </button>
           <button className="px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold hover:bg-indigo-700 active:scale-95 transition-all shadow-lg shadow-indigo-200 dark:shadow-none">
             Share Report
           </button>
@@ -302,9 +278,7 @@ const Results = ({ result, onBack }) => {
                   className={`${getScoreColor(
                     totalScore
                   )} transition-all duration-1000 ease-out`}
-                  style={{
-                    filter: "drop-shadow(0 0 8px currentColor)",
-                  }}
+                  style={{ filter: "drop-shadow(0 0 8px currentColor)" }}
                 />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
@@ -345,7 +319,7 @@ const Results = ({ result, onBack }) => {
                       className={`h-full ${getScoreBg(
                         metric.value
                       )} transition-all duration-1000 ease-out rounded-full`}
-                      style={{ width: `${metric.value}%` }}
+                      style={{ width: `${Math.min(metric.value, 100)}%` }}
                     ></div>
                   </div>
                 </div>
@@ -353,7 +327,7 @@ const Results = ({ result, onBack }) => {
             </div>
           </div>
 
-          {/* Quick Stats */}
+          {/* Quick Stats Summary */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
             <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
               Audit Summary
@@ -396,7 +370,7 @@ const Results = ({ result, onBack }) => {
           </div>
         </div>
 
-        {/* Right Column: Detailed Audit */}
+        {/* Right Column: Detailed Audit & Suggestions */}
         <div className="lg:col-span-2 space-y-8">
           {/* Competitive Analysis */}
           <ComparisonSection
@@ -405,7 +379,7 @@ const Results = ({ result, onBack }) => {
             topRanking={result.comparison?.topRanking || 92}
           />
 
-          {/* Audit Report */}
+          {/* ✅ DETAILED AUDIT REPORT (FIXED) */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/20 dark:to-violet-950/20">
               <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900 dark:text-white">
@@ -424,6 +398,15 @@ const Results = ({ result, onBack }) => {
                   audit.status === "warn" ? "warning" : audit.status;
                 const config =
                   statusConfig[normalizedStatus] || statusConfig.fail;
+
+                // Fallback for missing fields
+                const auditTitle =
+                  audit.title || audit.name || audit.audit || "Untitled Check";
+                const auditDesc =
+                  audit.description ||
+                  audit.explanation ||
+                  "No description provided.";
+
                 return (
                   <div
                     key={idx}
@@ -437,16 +420,16 @@ const Results = ({ result, onBack }) => {
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <h4 className="font-bold text-sm text-gray-900 dark:text-white">
-                          {audit.title}
+                          {auditTitle}
                         </h4>
                         <span
                           className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${config.bg} ${config.color}`}
                         >
-                          {audit.status}
+                          {audit.status || "unknown"}
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        {audit.description}
+                        {auditDesc}
                       </p>
                     </div>
                   </div>
@@ -455,7 +438,7 @@ const Results = ({ result, onBack }) => {
             </div>
           </div>
 
-          {/* Smart Suggestions */}
+          {/* ✅ SMART SUGGESTIONS (FIXED UI) */}
           <div>
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -483,54 +466,63 @@ const Results = ({ result, onBack }) => {
                         {sug.type || "general"}
                       </span>
                       <h4 className="font-bold text-sm text-gray-900 dark:text-white">
-                        {sug.title}
+                        {sug.title || "Optimization Suggestion"}
                       </h4>
                     </div>
-                    <button
-                      onClick={() => copyToClipboard(sug.code || "", idx)}
-                      className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-90 group relative"
-                      title="Copy code"
-                    >
-                      {copiedIndex === idx ? (
-                        <Icons.CheckCircle className="w-5 h-5 text-emerald-500" />
-                      ) : (
-                        <Icons.Copy className="w-5 h-5" />
+
+                    {/* Only show copy button if there is actual code */}
+                    {sug.code &&
+                      sug.code !== "null" &&
+                      !sug.code.includes("No specific code") && (
+                        <button
+                          onClick={() => copyToClipboard(sug.code, idx)}
+                          className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-90 group relative"
+                          title="Copy code"
+                        >
+                          {copiedIndex === idx ? (
+                            <Icons.CheckCircle className="w-5 h-5 text-emerald-500" />
+                          ) : (
+                            <Icons.Copy className="w-5 h-5" />
+                          )}
+                          <span className="absolute -top-8 right-0 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                            {copiedIndex === idx ? "Copied!" : "Copy code"}
+                          </span>
+                        </button>
                       )}
-                      <span className="absolute -top-8 right-0 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                        {copiedIndex === idx ? "Copied!" : "Copy code"}
-                      </span>
-                    </button>
                   </div>
+
                   <div className="p-6">
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed flex items-start gap-2">
                       <Icons.AlertCircle className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-                      <span className="italic">{sug.explanation}</span>
+                      <span className="italic">
+                        {sug.explanation || sug.description}
+                      </span>
                     </p>
-                    <div className="relative group/code">
-                      <pre className="p-6 bg-slate-50 dark:bg-gray-950 text-slate-700 dark:text-indigo-300 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-x-auto text-xs font-mono leading-relaxed shadow-inner">
-                        <code>
-                          {sug.code &&
-                            sug.code !== "null" &&
-                            !sug.code.includes("No specific code") && (
-                              <div className="relative group/code mt-4">
-                                <pre className="p-6 bg-slate-50 dark:bg-gray-950 text-slate-700 dark:text-indigo-300 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-x-auto text-xs font-mono leading-relaxed shadow-inner">
-                                  <code>{sug.code}</code>
-                                </pre>
-                                <div className="absolute top-4 right-4 opacity-0 group-hover/code:opacity-100 transition-opacity">
-                                  <span className="text-[10px] bg-slate-200 dark:bg-gray-800 px-2.5 py-1 rounded-md text-slate-600 dark:text-gray-400 uppercase font-bold tracking-wider shadow-sm">
-                                    {sug.type || "general"}
-                                  </span>
-                                </div>
-                              </div>
-                            )}
-                        </code>
-                      </pre>
-                      <div className="absolute top-4 right-4 opacity-0 group-hover/code:opacity-100 transition-opacity">
-                        <span className="text-[10px] bg-slate-200 dark:bg-gray-800 px-2.5 py-1 rounded-md text-slate-600 dark:text-gray-400 uppercase font-bold tracking-wider shadow-sm">
-                          {sug.type || "general"}
-                        </span>
+
+                    {/* ✅ CONDITIONAL CODE BLOCK RENDER */}
+                    {sug.code &&
+                    sug.code !== "null" &&
+                    !sug.code.includes("No specific code") ? (
+                      <div className="relative group/code">
+                        <div className="absolute -top-3 left-4 px-2 bg-slate-50 dark:bg-gray-900 text-[10px] font-bold tracking-wider text-indigo-500 uppercase border border-indigo-100 dark:border-indigo-900/50 rounded z-10">
+                          Code Suggestion
+                        </div>
+                        <pre className="p-6 bg-[#0d1117] text-gray-300 border border-gray-800 rounded-2xl overflow-x-auto text-xs font-mono leading-relaxed shadow-inner">
+                          <code>{sug.code}</code>
+                        </pre>
+                        <div className="absolute top-4 right-4 opacity-0 group-hover/code:opacity-100 transition-opacity">
+                          <span className="text-[10px] bg-slate-200 dark:bg-gray-800 px-2.5 py-1 rounded-md text-slate-600 dark:text-gray-400 uppercase font-bold tracking-wider shadow-sm">
+                            {sug.type || "general"}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                    ) : (
+                      // Fallback visual if no code is needed
+                      <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-xs text-gray-500 italic">
+                        No code snippet required for this fix. Check the
+                        explanation above.
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -542,7 +534,7 @@ const Results = ({ result, onBack }) => {
   );
 };
 
-// Updated PropTypes – made optional to prevent warnings
+// PropTypes (Optional/Loose to prevent crashes)
 Results.propTypes = {
   result: PropTypes.shape({
     title: PropTypes.string,
@@ -558,22 +550,8 @@ Results.propTypes = {
       topRanking: PropTypes.number,
       industryAverage: PropTypes.number,
     }),
-    audits: PropTypes.arrayOf(
-      PropTypes.shape({
-        title: PropTypes.string,
-        description: PropTypes.string,
-        //status: PropTypes.oneOf(["pass", "warning", "fail"]),
-        status: PropTypes.oneOf(["pass", "warning", "fail", "warn"]).isRequired,
-      })
-    ),
-    suggestions: PropTypes.arrayOf(
-      PropTypes.shape({
-        type: PropTypes.string,
-        title: PropTypes.string,
-        explanation: PropTypes.string,
-        code: PropTypes.string,
-      })
-    ),
+    audits: PropTypes.array,
+    suggestions: PropTypes.array,
   }),
   onBack: PropTypes.func.isRequired,
 };
