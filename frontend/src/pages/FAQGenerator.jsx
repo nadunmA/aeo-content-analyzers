@@ -4,9 +4,16 @@ import { Icons } from "../constants";
 const FAQGenerator = ({ onBack }) => {
   const [faqs, setFaqs] = useState([{ question: "", answer: "" }]);
   const [generatedSchema, setGeneratedSchema] = useState("");
-  const [copied, setCopied] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [tipsVisible, setTipsVisible] = useState(false);
+
+  // Notification State
+  const [toast, setToast] = useState({
+    show: false,
+    message: "",
+    type: "error",
+  });
+
   const tipsRef = useRef(null);
 
   // Entry animation
@@ -34,6 +41,14 @@ const FAQGenerator = ({ onBack }) => {
     return () => observer.disconnect();
   }, []);
 
+  // Notification Helper Function
+  const showToast = (message, type = "error") => {
+    setToast({ show: true, message, type });
+    setTimeout(() => {
+      setToast((prev) => ({ ...prev, show: false }));
+    }, 3000);
+  };
+
   const addFAQ = () => {
     setFaqs([...faqs, { question: "", answer: "" }]);
   };
@@ -57,7 +72,7 @@ const FAQGenerator = ({ onBack }) => {
     );
 
     if (validFaqs.length === 0) {
-      alert("Please add at least one question and answer");
+      showToast("Please add at least one question and answer!", "error");
       return;
     }
 
@@ -76,21 +91,23 @@ const FAQGenerator = ({ onBack }) => {
 
     const schemaString = JSON.stringify(schema, null, 2);
     setGeneratedSchema(schemaString);
+    showToast("Schema generated successfully!", "success");
   };
 
   const copyToClipboard = async () => {
     try {
       await navigator.clipboard.writeText(generatedSchema);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      showToast("Schema code copied to clipboard!", "success");
     } catch (err) {
       console.error("Failed to copy:", err);
+      showToast("Failed to copy code.", "error");
     }
   };
 
   const clearAll = () => {
     setFaqs([{ question: "", answer: "" }]);
     setGeneratedSchema("");
+    showToast("All fields cleared.", "success");
   };
 
   const tips = [
@@ -115,7 +132,83 @@ const FAQGenerator = ({ onBack }) => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto py-10 px-4">
+    <div className="max-w-6xl mx-auto py-10 px-4 relative">
+      {/* ✅ UPDATED: Toast දැන් එන්නේ උඩින් (Top Center) */}
+      <div
+        className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] transition-all duration-500 ease-out ${
+          toast.show
+            ? "translate-y-0 opacity-100"
+            : "-translate-y-10 opacity-0 pointer-events-none"
+        }`}
+      >
+        <div
+          className={`flex items-center gap-3 px-6 py-3 rounded-full shadow-2xl border backdrop-blur-xl ${
+            toast.type === "error"
+              ? "bg-white/95 dark:bg-gray-900/95 border-red-200 dark:border-red-800 text-red-600 dark:text-red-400"
+              : "bg-white/95 dark:bg-gray-900/95 border-emerald-200 dark:border-emerald-800 text-emerald-600 dark:text-emerald-400"
+          }`}
+        >
+          <div
+            className={`p-1.5 rounded-full ${
+              toast.type === "error"
+                ? "bg-red-100 dark:bg-red-900/50"
+                : "bg-emerald-100 dark:bg-emerald-900/50"
+            }`}
+          >
+            {toast.type === "error" ? (
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="w-5 h-5"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 13l4 4L19 7"
+                />
+              </svg>
+            )}
+          </div>
+          <div>
+            <p className="font-semibold text-sm pr-2">{toast.message}</p>
+          </div>
+          <button
+            onClick={() => setToast((prev) => ({ ...prev, show: false }))}
+            className="pl-2 border-l border-gray-200 dark:border-gray-700 hover:opacity-70"
+          >
+            <svg
+              className="w-4 h-4"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <div
         className={`text-center mb-12 transition-all duration-700 ${
@@ -305,41 +398,20 @@ const FAQGenerator = ({ onBack }) => {
                 onClick={copyToClipboard}
                 className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-full font-semibold text-sm hover:bg-emerald-100 dark:hover:bg-emerald-900/30 hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
               >
-                {copied ? (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <svg
-                      className="w-4 h-4"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                      />
-                    </svg>
-                    Copy Code
-                  </>
-                )}
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                  />
+                </svg>
+                Copy Code
               </button>
             )}
           </div>
