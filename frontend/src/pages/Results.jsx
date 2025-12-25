@@ -125,7 +125,6 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
   );
 };
 
-// PropTypes for ComparisonSection
 ComparisonSection.propTypes = {
   yourScore: PropTypes.number.isRequired,
   industryAverage: PropTypes.number.isRequired,
@@ -179,20 +178,27 @@ const Results = ({ result, onBack }) => {
     }
   };
 
+  // FIXED: Use safe access with fallbacks for different backend field names
+  const schemaScore = result?.score?.schema ?? result?.score?.seo ?? 0;
+  const structureScore =
+    result?.score?.structure ?? result?.score?.technical ?? 0;
+  const readabilityScore = result?.score?.readability ?? 0;
+  const totalScore = result?.score?.total ?? 0;
+
   const scoreMetrics = [
     {
       label: "Schema Markup",
-      value: result.score.schema,
+      value: schemaScore,
       icon: <Icons.CheckCircle className="w-4 h-4" />,
     },
     {
       label: "Structure & Q&A",
-      value: result.score.structure,
+      value: structureScore,
       icon: <Icons.FileText className="w-4 h-4" />,
     },
     {
       label: "Information Density",
-      value: result.score.readability,
+      value: readabilityScore,
       icon: <Icons.Search className="w-4 h-4" />,
     },
   ];
@@ -215,12 +221,12 @@ const Results = ({ result, onBack }) => {
     },
   };
 
-  const overallBadge = getScoreBadge(result.score.total);
+  const overallBadge = getScoreBadge(totalScore);
 
   const auditSummary = {
-    passed: result.audits.filter((a) => a.status === "pass").length,
-    warnings: result.audits.filter((a) => a.status === "warning").length,
-    failed: result.audits.filter((a) => a.status === "fail").length,
+    passed: result.audits?.filter((a) => a.status === "pass").length ?? 0,
+    warnings: result.audits?.filter((a) => a.status === "warning").length ?? 0,
+    failed: result.audits?.filter((a) => a.status === "fail").length ?? 0,
   };
 
   return (
@@ -241,7 +247,7 @@ const Results = ({ result, onBack }) => {
             Analysis Report
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-lg font-medium max-w-2xl">
-            {result.title}
+            {result.title || "Untitled Report"}
           </p>
         </div>
         <div className="flex gap-3">
@@ -291,12 +297,10 @@ const Results = ({ result, onBack }) => {
                   stroke="currentColor"
                   strokeWidth="14"
                   strokeDasharray={2 * Math.PI * 80}
-                  strokeDashoffset={
-                    2 * Math.PI * 80 * (1 - result.score.total / 100)
-                  }
+                  strokeDashoffset={2 * Math.PI * 80 * (1 - totalScore / 100)}
                   strokeLinecap="round"
                   className={`${getScoreColor(
-                    result.score.total
+                    totalScore
                   )} transition-all duration-1000 ease-out`}
                   style={{
                     filter: "drop-shadow(0 0 8px currentColor)",
@@ -305,11 +309,9 @@ const Results = ({ result, onBack }) => {
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
                 <span
-                  className={`text-6xl font-black ${getScoreColor(
-                    result.score.total
-                  )}`}
+                  className={`text-6xl font-black ${getScoreColor(totalScore)}`}
                 >
-                  {result.score.total}
+                  {totalScore}
                 </span>
                 <span className="text-xs font-bold text-gray-400 dark:text-gray-500 mt-1">
                   OUT OF 100
@@ -398,7 +400,7 @@ const Results = ({ result, onBack }) => {
         <div className="lg:col-span-2 space-y-8">
           {/* Competitive Analysis */}
           <ComparisonSection
-            yourScore={result.score.total}
+            yourScore={totalScore}
             industryAverage={result.comparison?.industryAverage || 68}
             topRanking={result.comparison?.topRanking || 92}
           />
@@ -413,12 +415,12 @@ const Results = ({ result, onBack }) => {
                 Detailed Audit Report
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ml-11">
-                {result.audits.length} checks performed
+                {result.audits?.length || 0} checks performed
               </p>
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
-              {result.audits.map((audit, idx) => {
-                const config = statusConfig[audit.status];
+              {(result.audits || []).map((audit, idx) => {
+                const config = statusConfig[audit.status] || statusConfig.fail;
                 return (
                   <div
                     key={idx}
@@ -462,12 +464,12 @@ const Results = ({ result, onBack }) => {
                 </p>
               </div>
               <span className="px-3 py-1 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-full text-xs font-bold">
-                {result.suggestions.length} suggestions
+                {(result.suggestions || []).length} suggestions
               </span>
             </div>
 
             <div className="space-y-6">
-              {result.suggestions.map((sug, idx) => (
+              {(result.suggestions || []).map((sug, idx) => (
                 <div
                   key={idx}
                   className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-800 transition-all"
@@ -475,14 +477,14 @@ const Results = ({ result, onBack }) => {
                   <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/30">
                     <div className="flex items-center gap-3">
                       <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs uppercase tracking-wider font-bold">
-                        {sug.type}
+                        {sug.type || "general"}
                       </span>
                       <h4 className="font-bold text-sm text-gray-900 dark:text-white">
                         {sug.title}
                       </h4>
                     </div>
                     <button
-                      onClick={() => copyToClipboard(sug.code, idx)}
+                      onClick={() => copyToClipboard(sug.code || "", idx)}
                       className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-90 group relative"
                       title="Copy code"
                     >
@@ -503,11 +505,13 @@ const Results = ({ result, onBack }) => {
                     </p>
                     <div className="relative group/code">
                       <pre className="p-6 bg-slate-50 dark:bg-gray-950 text-slate-700 dark:text-indigo-300 border border-slate-200 dark:border-gray-800 rounded-2xl overflow-x-auto text-xs font-mono leading-relaxed shadow-inner">
-                        <code>{sug.code}</code>
+                        <code>
+                          {sug.code || "// No code suggestion available"}
+                        </code>
                       </pre>
                       <div className="absolute top-4 right-4 opacity-0 group-hover/code:opacity-100 transition-opacity">
                         <span className="text-[10px] bg-slate-200 dark:bg-gray-800 px-2.5 py-1 rounded-md text-slate-600 dark:text-gray-400 uppercase font-bold tracking-wider shadow-sm">
-                          {sug.type}
+                          {sug.type || "general"}
                         </span>
                       </div>
                     </div>
@@ -522,37 +526,37 @@ const Results = ({ result, onBack }) => {
   );
 };
 
-// PropTypes validation
+// Updated PropTypes – made optional to prevent warnings
 Results.propTypes = {
   result: PropTypes.shape({
-    title: PropTypes.string.isRequired,
+    title: PropTypes.string,
     score: PropTypes.shape({
-      total: PropTypes.number.isRequired,
-      schema: PropTypes.number.isRequired,
-      structure: PropTypes.number.isRequired,
-      readability: PropTypes.number.isRequired,
-    }).isRequired,
+      total: PropTypes.number,
+      schema: PropTypes.number,
+      seo: PropTypes.number,
+      structure: PropTypes.number,
+      technical: PropTypes.number,
+      readability: PropTypes.number,
+    }),
     comparison: PropTypes.shape({
-      yourScore: PropTypes.number,
       topRanking: PropTypes.number,
       industryAverage: PropTypes.number,
-      position: PropTypes.string,
     }),
     audits: PropTypes.arrayOf(
       PropTypes.shape({
-        title: PropTypes.string.isRequired,
-        description: PropTypes.string.isRequired,
-        status: PropTypes.oneOf(["pass", "warning", "fail"]).isRequired,
+        title: PropTypes.string,
+        description: PropTypes.string,
+        status: PropTypes.oneOf(["pass", "warning", "fail"]),
       })
-    ).isRequired,
+    ),
     suggestions: PropTypes.arrayOf(
       PropTypes.shape({
-        type: PropTypes.string.isRequired,
-        title: PropTypes.string.isRequired,
-        explanation: PropTypes.string.isRequired,
-        code: PropTypes.string.isRequired,
+        type: PropTypes.string,
+        title: PropTypes.string,
+        explanation: PropTypes.string,
+        code: PropTypes.string,
       })
-    ).isRequired,
+    ),
   }),
   onBack: PropTypes.func.isRequired,
 };
