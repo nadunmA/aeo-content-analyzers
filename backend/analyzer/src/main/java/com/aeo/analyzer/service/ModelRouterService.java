@@ -37,7 +37,8 @@ public class ModelRouterService {
         // Second: Use Claude 3 Haiku (assuming still available; update to claude-3.5-haiku if deprecated)
         try {
             log.info("🛡️ [2/4] Trying Backup 1: Claude 3 Haiku...");
-            String result = openRouterService.analyzeContent(text, "anthropic/claude-3-haiku");
+            // Second: Use Claude 3.5 Sonnet
+            String result = openRouterService.analyzeContent(text, "anthropic/claude-3.5-sonnet-20240620");
 
             if (result != null && !result.trim().isEmpty()) {
                 log.info("✅ Claude 3 Haiku succeeded");

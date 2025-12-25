@@ -41,41 +41,32 @@ public class OpenRouterService {
 
         // Improved Prompt with detailed structure
         String prompt = """
-            You are an AEO (Answer Engine Optimization) expert. 
-            Analyze the following content for SEO, readability, and technical aspects.
-            Return ONLY a strict JSON object with this exact structure:
-            {
-              "score": {
-                "total": <integer 0-100>,
-                "seo": <integer 0-100>,
-                "readability": <integer 0-100>,
-                "technical": <integer 0-100>
-              },
-              "audits": [
-                {
-                  "title": "<string>",
-                  "status": "<pass|fail|warn>",
-                  "description": "<string>"
-                },
-                ... more audits
-              ],
-              "suggestions": [
-                {
-                  "priority": "<high|medium|low>",
-                  "category": "<seo|readability|technical>",
-                  "description": "<string>",
-                  "impact": "<string>"
-                },
-                ... more suggestions
-              ],
-              "comparison": {
-                "topRanking": <integer 0-100>,
-                "industryAverage": <integer 0-100>
-              }
-            }
-            Do not include any extra text, explanations, or markdown outside the JSON.
-            Content to analyze: %s
-            """.formatted(limitedText);
+    You are an AEO optimization expert.
+    
+    Analyze the content and respond with ONLY valid JSON using this EXACT structure:
+    
+    {
+      "score": { "total": 85, "seo": 90, "readability": 80, "technical": 82 },
+      "audits": [ ... ],
+      "suggestions": [ ... ],
+      "comparison": { "topRanking": 92, "industryAverage": 68 }
+    }
+    
+    CRITICAL RULES FOR SUGGESTIONS:
+    - You MUST include exactly these fields in EVERY suggestion: priority, category, description, code
+    - The "code" field is MANDATORY and can NEVER be empty or missing
+    - For schema/meta: provide full HTML/JSON-LD code
+    - For content/structure: provide example text or HTML snippet
+    - For general advice: write "// Manual implementation required" followed by example
+    
+    Examples:
+    "code": "<meta name=\\"description\\" content=\\"Your summary\\">"
+    "code": "<h2>Why do powerful films fail at box office?</h2>"
+    "code": "// Manual: Break long paragraphs into 3-4 sentence chunks"
+    
+    Content:
+    %s
+    """.formatted(limitedText);
 
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", modelName);
