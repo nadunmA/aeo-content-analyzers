@@ -1,18 +1,13 @@
 package com.aeo.analyzer.service;
 
-import io.github.bonigarcia.wdm.WebDriverManager;
+import com.microsoft.playwright.*;
+import com.microsoft.playwright.options.LoadState;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.openqa.selenium.By;
-import org.openqa.selenium.JavascriptExecutor;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.chrome.ChromeOptions;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import org.openqa.selenium.support.ui.WebDriverWait;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -20,18 +15,16 @@ import java.net.InetAddress;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.UnknownHostException;
-import java.time.Duration;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 import java.util.Random;
 
 @Service
 public class WebScraperService {
 
-    private static final int TIMEOUT_MS = 20000;
+    private static final Logger log = LoggerFactory.getLogger(WebScraperService.class);
+
     private static final int MIN_CONTENT_LENGTH = 200;
     private static final int MAX_CONTENT_LENGTH = 80000;
+
     private static final String[] USER_AGENTS = {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -39,70 +32,99 @@ public class WebScraperService {
     };
 
     private final Random random = new Random();
-    private boolean seleniumInitialized = false;
-
-    public WebScraperService() {
-        try {
-            WebDriverManager.chromedriver().setup();
-            seleniumInitialized = true;
-            System.out.println("✓ Chrome Selenium initialized successfully");
-        } catch (Exception e) {
-            System.err.println("⚠ Selenium initialization failed: " + e.getMessage());
-            seleniumInitialized = false;
-        }
-    }
 
     public String scrapeUrl(String url) throws IOException {
-        validateUrl(url); // Added for SSRF protection
+        validateUrl(url);
 
-        // For Medium, directly use Selenium (it requires JS)
-        // WARNING: Scraping Medium may violate their ToS. Consider alternatives or obtain permission.
-        if (url.contains("medium.com")) {
-            if (seleniumInitialized) {
-                try {
-                    return scrapeWithSelenium(url);
-                } catch (Exception e) {
-                    throw new IOException("Medium scraping failed: " + e.getMessage());
-                }
-            } else {
-                throw new IOException("Medium requires Selenium which is not available");
+        // Primary: Playwright (modern, faster, better anti-bot resistance)
+        try (Playwright playwright = Playwright.create()) {
+            BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions()
+                    .setHeadless(true); // Set false for local debugging
+
+            Browser browser = playwright.chromium().launch(launchOptions);
+
+            Browser.NewContextOptions contextOptions = new Browser.NewContextOptions()
+                    .setUserAgent(USER_AGENTS[random.nextInt(USER_AGENTS.length)])
+                    .setViewportSize(1920, 1080)
+                    .setLocale("en-US")
+                    .setTimezoneId("Asia/Colombo")
+                    .setJavaScriptEnabled(true)
+                    .setBypassCSP(true);
+
+            BrowserContext context = browser.newContext(contextOptions);
+            Page page = context.newPage();
+
+            // Navigate with timeout
+            page.navigate(url, new Page.NavigateOptions().setTimeout(40000));
+
+            // Wait for network idle (all resources loaded)
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+
+            // Human-like behavior
+            Thread.sleep(random.nextInt(2000) + 1000);
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight / 2)");
+            Thread.sleep(1000);
+            page.evaluate("window.scrollTo(0, document.body.scrollHeight)");
+            Thread.sleep(1000);
+
+            // Cloudflare / Anti-bot detection
+            String pageTitle = page.title().toLowerCase();
+            String pageSource = page.content().toLowerCase();
+
+            if (pageTitle.contains("just a moment") ||
+                    pageTitle.contains("attention required") ||
+                    pageTitle.contains("access denied") ||
+                    pageTitle.contains("verify you are human") ||
+                    pageSource.contains("cf-browser-verification") ||
+                    pageSource.contains("checking your browser") ||
+                    pageSource.contains("cloudflare")) {
+
+                log.warn("⛔ Anti-bot protection detected (likely Cloudflare) on: {}", url);
+                context.close();
+                browser.close();
+                throw new IOException("Site is protected by Cloudflare or similar anti-bot system");
             }
-        }
 
-        // For other sites, try Jsoup first
-        try {
+            String htmlContent = page.content();
+
+            context.close();
+            browser.close();
+
+            // Clean HTML with Jsoup
+            Document doc = Jsoup.parse(htmlContent);
+            doc.select("script, style, noscript, iframe, nav, header, footer, aside, " +
+                    ".advertisement, .ad, [class*=ads], [id*=ads], .sidebar, .comments, " +
+                    ".related-posts, .social-share, .newsletter").remove();
+
+            Element articleBody = findArticleBody(doc);
+            if (articleBody == null) {
+                articleBody = doc.body();
+            }
+
+            String cleanText = articleBody.text()
+                    .replaceAll("\\s+", " ")
+                    .trim();
+
+            if (cleanText.length() < MIN_CONTENT_LENGTH) {
+                throw new IOException("Extracted content too short – possibly blocked or paywalled");
+            }
+
+            if (cleanText.length() > MAX_CONTENT_LENGTH) {
+                cleanText = cleanText.substring(0, MAX_CONTENT_LENGTH) + "... [content truncated]";
+            }
+
+            log.info("Successfully scraped {} characters from {}", cleanText.length(), url);
+            return cleanText;
+
+        } catch (PlaywrightException e) {
+            log.warn("Playwright failed for {}: {}. Falling back to Jsoup.", url, e.getMessage());
             return scrapeWithJsoup(url);
-        } catch (org.jsoup.HttpStatusException e) {
-            if (e.getStatusCode() == 403 || e.getStatusCode() == 429) {
-                if (seleniumInitialized) {
-                    try {
-                        return scrapeWithSelenium(url);
-                    } catch (Exception seleniumError) {
-                        throw new IOException("Both Jsoup and Selenium failed: " + seleniumError.getMessage());
-                    }
-                } else {
-                    throw new IOException("Access denied (403) - Selenium not available. Site may be blocking bots.");
-                }
-            }
-            throw new IOException("HTTP error " + e.getStatusCode() + ": " + e.getMessage());
-        }
-    }
-
-    private void validateUrl(String urlString) throws IOException {
-        try {
-            URL url = new URL(urlString);
-            String protocol = url.getProtocol().toLowerCase();
-            if (!"http".equals(protocol) && !"https".equals(protocol)) {
-                throw new IOException("Invalid protocol: " + protocol);
-            }
-
-            String host = url.getHost();
-            InetAddress inetAddress = InetAddress.getByName(host);
-            if (inetAddress.isLoopbackAddress() || inetAddress.isSiteLocalAddress() || inetAddress.isLinkLocalAddress() || inetAddress.isAnyLocalAddress()) {
-                throw new IOException("Invalid host: Local or private IP addresses are not allowed");
-            }
-        } catch (MalformedURLException | UnknownHostException e) {
-            throw new IOException("Invalid URL: " + e.getMessage());
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("Scraping interrupted", e);
+        } catch (Exception e) {
+            log.error("Unexpected error during Playwright scraping: {}", e.getMessage());
+            throw new IOException("Playwright scraping failed: " + e.getMessage(), e);
         }
     }
 
@@ -113,104 +135,38 @@ public class WebScraperService {
             Thread.currentThread().interrupt();
         }
 
-        try {
-            String userAgent = USER_AGENTS[random.nextInt(USER_AGENTS.length)];
+        String userAgent = USER_AGENTS[random.nextInt(USER_AGENTS.length)];
 
-            Document doc = Jsoup.connect(url)
-                    .userAgent(userAgent)
-                    .referrer("https://www.bing.com")
-                    .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8")
-                    .header("Accept-Language", "en-US,en;q=0.9")
-                    .header("Accept-Encoding", "gzip, deflate, br")
-                    .header("Connection", "keep-alive")
-                    .timeout(TIMEOUT_MS)
-                    .followRedirects(true)
-                    .maxBodySize(0)
-                    .ignoreHttpErrors(false)
-                    .get();
+        Document doc = Jsoup.connect(url)
+                .userAgent(userAgent)
+                .referrer("https://www.google.com")
+                .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+                .header("Accept-Language", "en-US,en;q=0.9")
+                .timeout(20000)
+                .followRedirects(true)
+                .maxBodySize(0)
+                .get();
 
-            doc.select("script, style, noscript, iframe, nav, header, footer, aside, " +
-                    ".advertisement, .ad, [class*=ads], [id*=ads], .sidebar, .comments, " +
-                    ".related-posts, .social-share, .newsletter").remove();
+        doc.select("script, style, noscript, iframe, nav, header, footer, aside, " +
+                ".advertisement, .ad, [class*=ads], [id*=ads], .sidebar, .comments, " +
+                ".related-posts, .social-share, .newsletter").remove();
 
-            Element articleBody = findArticleBody(doc);
+        Element articleBody = findArticleBody(doc);
+        if (articleBody == null) articleBody = doc.body();
 
-            if (articleBody == null) {
-                articleBody = doc.body();
-            }
+        String cleanText = articleBody.text()
+                .replaceAll("\\s+", " ")
+                .trim();
 
-            String cleanText = articleBody.text()
-                    .replaceAll("\\s+", " ")
-                    .trim();
-
-            if (cleanText.length() > MAX_CONTENT_LENGTH) {
-                cleanText = cleanText.substring(0, MAX_CONTENT_LENGTH) + "... [content truncated]";
-            }
-
-            if (cleanText.length() < MIN_CONTENT_LENGTH) {
-                throw new IOException("Extracted content too short – possibly protected");
-            }
-
-            return cleanText;
-
-        } catch (java.net.SocketTimeoutException e) {
-            throw new IOException("Request timed out – page took too long to load", e);
-        } catch (UnknownHostException e) {
-            throw new IOException("Invalid or unreachable URL: " + url, e);
+        if (cleanText.length() < MIN_CONTENT_LENGTH) {
+            throw new IOException("Jsoup extracted content too short");
         }
-    }
 
-    private String scrapeWithSelenium(String url) throws Exception {
-        ChromeOptions options = new ChromeOptions();
-        options.addArguments("--headless=new"); // Headless mode for production
-        options.addArguments("--disable-gpu");
-        options.addArguments("--no-sandbox");
-        options.addArguments("--disable-dev-shm-usage");
-        options.addArguments("user-agent=" + USER_AGENTS[random.nextInt(USER_AGENTS.length)]);
-
-        WebDriver driver = null;
-        try {
-            driver = new ChromeDriver(options);
-            JavascriptExecutor js = (JavascriptExecutor) driver;
-
-            // Remove webdriver property
-            js.executeScript("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})");
-
-            WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(30));
-
-            System.out.println("Loading URL: " + url);
-            driver.get(url);
-
-            // Wait for page to load
-            Thread.sleep(random.nextInt(3000) + 3000);
-
-            // Scroll to trigger lazy loading
-            for (int i = 0; i < 3; i++) {
-                js.executeScript("window.scrollTo(0, document.body.scrollHeight/3 * " + (i + 1) + ");");
-                Thread.sleep(1000);
-            }
-
-            // Wait for article content
-            try {
-                wait.until(ExpectedConditions.presenceOfElementLocated(By.tagName("article")));
-            } catch (Exception e) {
-                System.out.println("Article tag not found, continuing...");
-            }
-
-            String content = extractContentFromDriver(driver, url);
-
-            if (content.length() < MIN_CONTENT_LENGTH) {
-                throw new Exception("Content too short (" + content.length() + " chars) - may be blocked or paywall");
-            }
-
-            System.out.println("Successfully extracted " + content.length() + " characters");
-            return content;
-
-        } finally {
-            if (driver != null) {
-                driver.quit();
-            }
+        if (cleanText.length() > MAX_CONTENT_LENGTH) {
+            cleanText = cleanText.substring(0, MAX_CONTENT_LENGTH) + "... [truncated]";
         }
+
+        return cleanText;
     }
 
     private Element findArticleBody(Document doc) {
@@ -244,104 +200,23 @@ public class WebScraperService {
                 .orElse(null);
     }
 
-    private String extractContentFromDriver(WebDriver driver, String url) {
-        // 👇 1. මෙන්න මේ කොටස අලුතින් එකතු කරන්න (Add this new block)
-        String pageTitle = driver.getTitle().toLowerCase();
-        // Cloudflare හෝ වෙනත් Bot Guard එකක් ආවද බලනවා
-        if (pageTitle.contains("just a moment") ||
-                pageTitle.contains("access denied") ||
-                pageTitle.contains("attention required") ||
-                pageTitle.contains("security check") ||
-                pageTitle.contains("verify you are human")) {
-
-            System.err.println("⛔ Cloudflare/Bot protection detected on: " + url);
-            return ""; // හිස් එකක් යවනවා (එතකොට Scraper එක Fail කියලා දැනගන්නවා)
-        }
-        // ⬆️ අලුත් කොටස ඉවරයි
-
-
-        // 👇 ඔයාගේ පරණ Code එක එහෙමම තියෙන්න දෙන්න
-        StringBuilder content = new StringBuilder();
-
+    private void validateUrl(String urlString) throws IOException {
         try {
-            // Medium-specific selectors
-            if (url.contains("medium.com")) {
-                String[] mediumSelectors = {
-                        "article section p",
-                        "article p",
-                        "[data-selectable-paragraph] p",
-                        ".pw-post-body-paragraph"
-                };
-
-                for (String selector : mediumSelectors) {
-                    List<WebElement> paragraphs = driver.findElements(By.cssSelector(selector));
-                    if (!paragraphs.isEmpty()) {
-                        System.out.println("Found " + paragraphs.size() + " paragraphs with selector: " + selector);
-                        for (WebElement p : paragraphs) {
-                            String text = p.getText().trim();
-                            if (!text.isEmpty() && text.length() > 10) {
-                                content.append(text).append("\n\n");
-                            }
-                        }
-                        if (content.length() > MIN_CONTENT_LENGTH) {
-                            break;
-                        }
-                    }
-                }
+            URL url = new URL(urlString);
+            String protocol = url.getProtocol().toLowerCase();
+            if (!"http".equals(protocol) && !"https".equals(protocol)) {
+                throw new IOException("Invalid protocol: " + protocol);
             }
 
-            // Generic selectors
-            if (content.length() < MIN_CONTENT_LENGTH) {
-                String[] selectors = {
-                        "article section p",
-                        "article p",
-                        "div.postArticle-content p",
-                        ".meteredContent p",
-                        "main article p",
-                        "main p"
-                };
-
-                for (String selector : selectors) {
-                    List<WebElement> paragraphs = driver.findElements(By.cssSelector(selector));
-                    if (!paragraphs.isEmpty() && paragraphs.size() > 3) {
-                        for (WebElement p : paragraphs) {
-                            String text = p.getText().trim();
-                            if (!text.isEmpty() && text.length() > 20) {
-                                content.append(text).append("\n\n");
-                            }
-                        }
-                        break;
-                    }
-                }
+            String host = url.getHost();
+            InetAddress inetAddress = InetAddress.getByName(host);
+            if (inetAddress.isLoopbackAddress() || inetAddress.isSiteLocalAddress() ||
+                    inetAddress.isLinkLocalAddress() || inetAddress.isAnyLocalAddress()) {
+                throw new IOException("Invalid host: Local or private IP addresses are not allowed");
             }
-
-            // Fallback: get all paragraphs
-            if (content.length() < MIN_CONTENT_LENGTH) {
-                List<WebElement> allP = driver.findElements(By.tagName("p"));
-                System.out.println("Fallback: Found " + allP.size() + " total paragraphs");
-                for (WebElement p : allP) {
-                    String text = p.getText().trim();
-                    if (!text.isEmpty() && text.length() > 30) {
-                        content.append(text).append("\n\n");
-                    }
-                }
-            }
-
-        } catch (Exception e) {
-            System.err.println("Error extracting content: " + e.getMessage());
-            content.append(driver.findElement(By.tagName("body")).getText());
+        } catch (MalformedURLException | UnknownHostException e) {
+            throw new IOException("Invalid URL: " + e.getMessage());
         }
-
-        String result = content.toString()
-                .replaceAll("\\s+", " ")
-                .replaceAll("\\n{3,}", "\n\n")
-                .trim();
-
-        if (result.length() > MAX_CONTENT_LENGTH) {
-            result = result.substring(0, MAX_CONTENT_LENGTH) + "... [content truncated]";
-        }
-
-        return result;
     }
 
     public String extractTitleFromUrl(String url) {
@@ -365,7 +240,7 @@ public class WebScraperService {
             Thread.currentThread().interrupt();
             return "Untitled Article";
         } catch (Exception e) {
-            System.err.println("Failed to extract title from URL: " + e.getMessage());
+            log.warn("Failed to extract title from URL: {}", e.getMessage());
             return "Untitled Article";
         }
     }

@@ -38,6 +38,7 @@ public class ContentController {
     private final ObjectMapper objectMapper;
     private final WebScraperService webScraperService;
 
+
     public ContentController(AuditReportRepository repository, ObjectMapper objectMapper, WebScraperService webScraperService, ModelRouterService modelRouterService) {
         this.repository = repository;
         this.objectMapper = objectMapper;
@@ -73,24 +74,32 @@ public class ContentController {
 
             String aiJson = modelRouterService.analyzeWithFailover(contentToAnalyze);
 
-            // 👇 IMPROVED JSON CLEANER (Regex Based)
-            String cleanedJson = aiJson;
-            // 1. Find the first '{' and the last '}'
-            int firstBrace = aiJson.indexOf("{");
-            int lastBrace = aiJson.lastIndexOf("}");
+// NEW ROBUST CLEANER
+            String cleanedJson = aiJson.trim();
 
-            if (firstBrace != -1 && lastBrace != -1 && firstBrace < lastBrace) {
-                cleanedJson = aiJson.substring(firstBrace, lastBrace + 1);
-            } else {
-                // JSON structure not found
-                throw new RuntimeException("AI Response did not contain valid JSON object");
+            cleanedJson = cleanedJson.replaceAll("^```json\\s*", "")
+                    .replaceAll("^```\\s*", "")
+                    .replaceAll("\\s*```$", "");
+
+            int firstBrace = cleanedJson.indexOf("{");
+            int lastBrace = cleanedJson.lastIndexOf("}");
+
+            if (firstBrace == -1 || lastBrace == -1 || firstBrace >= lastBrace) {
+                log.error("Invalid JSON structure in AI response: {}", aiJson);
+                throw new RuntimeException("AI returned malformed JSON - no valid object");
             }
-            // ⬆️ END IMPROVEMENT
 
-            // Log for debugging (Optional)
-            // log.info("Final JSON to parse: {}", cleanedJson);
+            cleanedJson = cleanedJson.substring(firstBrace, lastBrace + 1);
+
+            cleanedJson = cleanedJson.replaceAll(",\\s*}", "}")
+                    .replaceAll(",\\s*]", "]")
+                    .trim();
+
+            log.info("Final cleaned JSON: {}", cleanedJson);
 
             objectMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
+            objectMapper.configure(JsonParser.Feature.ALLOW_TRAILING_COMMA, true); // Extra safety
+
             Map<String, Object> result = objectMapper.readValue(cleanedJson,
                     new TypeReference<Map<String, Object>>() {});
 
