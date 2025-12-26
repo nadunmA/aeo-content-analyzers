@@ -17,13 +17,13 @@ const History = ({ onView, onBack }) => {
   const [isVisible, setIsVisible] = useState(false);
   const containerRef = useRef(null);
 
-  // Backend Integration (Fetch Data)
+  // Backend Integration
   useEffect(() => {
     const fetchHistory = async () => {
       setIsLoading(true);
       try {
         const response = await fetch(
-          `http://localhost:6060/api/content/history?page=${currentPage}&size=12`
+          `http://localhost:6060/api/v1/content/history?page=${currentPage}&size=12`
         );
 
         if (!response.ok) {
@@ -56,7 +56,7 @@ const History = ({ onView, onBack }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:6060/api/content/report/${id}`,
+        `http://localhost:6060/api/v1/content/report/${id}`,
         { method: "DELETE" }
       );
 

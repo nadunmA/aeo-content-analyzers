@@ -6,17 +6,14 @@ const Landing = ({ onNavigate }) => {
   const [visibleSections, setVisibleSections] = useState(new Set());
   const sectionRefs = useRef({});
 
-  // Intersection Observer for scroll animations - triggers every time
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           const section = entry.target.dataset.section;
           if (entry.isIntersecting) {
-            // Add section when it enters viewport
             setVisibleSections((prev) => new Set([...prev, section]));
           } else {
-            // Remove section when it leaves viewport (enables re-animation)
             setVisibleSections((prev) => {
               const newSet = new Set(prev);
               newSet.delete(section);
@@ -373,7 +370,6 @@ const Landing = ({ onNavigate }) => {
   );
 };
 
-// PropTypes validation
 Landing.propTypes = {
   onNavigate: PropTypes.func.isRequired,
 };

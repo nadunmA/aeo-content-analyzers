@@ -7,7 +7,6 @@ const Footer = ({ onNavigate }) => {
   const [isVisible, setIsVisible] = useState(false);
   const footerRef = useRef(null);
 
-  // Show scroll to top button when user scrolls down
   useEffect(() => {
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 300);
@@ -17,7 +16,6 @@ const Footer = ({ onNavigate }) => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Intersection Observer for footer animation - triggers every time
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -25,7 +23,7 @@ const Footer = ({ onNavigate }) => {
           if (entry.isIntersecting) {
             setIsVisible(true);
           } else {
-            setIsVisible(false); // Reset when leaving viewport
+            setIsVisible(false);
           }
         });
       },

@@ -49,7 +49,6 @@ const Analyzer = ({ onComplete }) => {
   }, []);
 
   const handleAnalyze = async () => {
-    // Clear previous errors
     setError("");
 
     // Empty check
@@ -97,7 +96,7 @@ const Analyzer = ({ onComplete }) => {
       // Clear timeouts
       timeouts.forEach(clearTimeout);
 
-      // 8. Pass result to parent
+      // Pass result to parent
       onComplete(result);
     } catch (err) {
       // lear timeouts on error
@@ -392,7 +391,6 @@ Content goes here..."
   );
 };
 
-// PropTypes validation
 Analyzer.propTypes = {
   onComplete: PropTypes.func.isRequired,
 };

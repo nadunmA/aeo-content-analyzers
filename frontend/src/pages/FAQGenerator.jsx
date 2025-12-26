@@ -21,7 +21,6 @@ const FAQGenerator = ({ onBack }) => {
     setTimeout(() => setIsVisible(true), 100);
   }, []);
 
-  // Tips section observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
