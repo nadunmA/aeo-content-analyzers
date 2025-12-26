@@ -11,15 +11,11 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class AnalyzeRequest {
 
-    @NotBlank(message = "Text cannot be empty")
-    @Size(max = 2048, message = "URL is too long")
+    @NotBlank(message = "Content cannot be empty")
+    @Size(max = 50000, message = "Content is too long (Max 50,000 chars)")
     private String text;
 
-    @NotBlank(message = "Text cannot be empty")
-    @Size(max = 2048, message = "URL is too long")
-    private String type;
+    @NotBlank(message = "Type is required")
+    private String type; // 'url' or 'text'
 
-    @NotBlank(message = "Text cannot be empty")
-    @Size(max = 2048, message = "URL is too long")
-    private String url;
 }

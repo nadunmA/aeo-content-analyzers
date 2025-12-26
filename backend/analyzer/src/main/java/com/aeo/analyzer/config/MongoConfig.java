@@ -1,17 +1,21 @@
+// FILE: src/main/java/com/aeo/analyzer/config/MongoConfig.java
+// 🔄 REPLACE YOUR CURRENT MongoConfig.java WITH THIS
+
 package com.aeo.analyzer.config;
 
 import com.mongodb.ConnectionString;
 import com.mongodb.MongoClientSettings;
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.mongodb.core.MongoTemplate;
-import com.aeo.analyzer.exception.MongoConnectionException;
 
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Configuration
 public class MongoConfig {
 
@@ -24,9 +28,7 @@ public class MongoConfig {
     @Bean
     public MongoClient mongoClient() {
         try {
-            // Force TLS 1.2 protocol
-            System.setProperty("jdk.tls.client.protocols", "TLSv1.2");
-            System.setProperty("https.protocols", "TLSv1.2");
+            log.info("Initializing MongoDB connection...");
 
             ConnectionString connectionString = new ConnectionString(mongoUri);
 
@@ -47,11 +49,15 @@ public class MongoConfig {
                     .retryReads(true)
                     .build();
 
-            return MongoClients.create(settings);
+            MongoClient client = MongoClients.create(settings);
+
+            log.info("✅ MongoDB client created successfully");
+            return client;
 
         } catch (Exception e) {
-            throw new MongoConnectionException(
-                    "MongoDB client creation failed: " + e.getMessage(),
+            log.error("❌ MongoDB client creation failed: {}", e.getMessage(), e);
+            throw new RuntimeException(
+                    "Failed to connect to MongoDB: " + e.getMessage(),
                     e
             );
         }
@@ -59,6 +65,7 @@ public class MongoConfig {
 
     @Bean
     public MongoTemplate mongoTemplate(MongoClient mongoClient) {
+        log.info("Creating MongoTemplate for database: {}", databaseName);
         return new MongoTemplate(mongoClient, databaseName);
     }
 }
