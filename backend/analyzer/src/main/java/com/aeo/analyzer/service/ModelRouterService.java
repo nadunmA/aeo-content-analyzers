@@ -53,7 +53,7 @@ public class ModelRouterService {
         // Third: Use GPT-4o-mini (assuming still available; update to openai/gpt-4o if needed)
         try {
             log.info("🛡️ [3/4] Trying Backup 2: GPT-4o-mini...");
-            String result = openRouterService.analyzeContent(text, "openai/gpt-4o-mini");
+            String result = openRouterService.analyzeContent(text, "deepseek/deepseek-chat");
 
             if (result != null && !result.trim().isEmpty()) {
                 log.info("✅ GPT-4o-mini succeeded");

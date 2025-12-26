@@ -17,7 +17,6 @@ const News = ({ onBack }) => {
     };
   }, []);
 
-  // Reset animation on category change
   useEffect(() => {
     const timer1 = setTimeout(() => setCardsAnimated(false), 0);
     const timer2 = setTimeout(() => setCardsAnimated(true), 100);

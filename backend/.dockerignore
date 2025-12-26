@@ -1,0 +1,11 @@
+target/
+.mvn/
+*.log
+*.class
+.git
+.gitignore
+README.md
+.env
+.idea/
+*.iml
+node_modules/

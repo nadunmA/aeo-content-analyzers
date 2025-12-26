@@ -1,11 +1,11 @@
 package com.aeo.analyzer.service;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.*;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -13,79 +13,116 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class OpenRouterService {
-
-    private static final Logger log = LoggerFactory.getLogger(OpenRouterService.class);
 
     @Value("${openrouter.api.key}")
     private String apiKey;
 
-    private final RestTemplate restTemplate;
-    private final ObjectMapper objectMapper;
-    private final String API_URL = "https://openrouter.ai/api/v1/chat/completions";
+    private final String apiUrl = "https://openrouter.ai/api/v1/chat/completions";
+    private final RestTemplate restTemplate = new RestTemplate();
 
-    public OpenRouterService(RestTemplate restTemplate, ObjectMapper objectMapper) {
-        this.restTemplate = restTemplate;
-        this.objectMapper = objectMapper;
-    }
+    public String analyzeContent(String content, String modelName) {
+        try {
+            log.info("🔄 Calling OpenRouter Model: {}", modelName);
 
-    public String analyzeContent(String text, String modelName) throws Exception {
+            // ✅ FIX: Prompt uses lowercase 'passed', 'warning', 'failed' strictly!
+            String prompt = String.format("""
+    You are an expert AEO Auditor. Analyze the content and return a STRICT JSON response.
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.set("Authorization", "Bearer " + apiKey);
+    CRITICAL INSTRUCTIONS:
+    1. For the 'suggestions' array, the 'codeSnippet' field MUST NEVER BE NULL.
+    2. If the suggestion is about content (e.g., "Add more examples"), provide a Markdown example of the improved content in 'codeSnippet'.
+    3. If the suggestion is technical/SEO, provide the HTML/CSS/JS code.
+    4. Force generation of a valid string for 'codeSnippet' in all cases.
 
-        // Content Limit
-        String limitedText = text.substring(0, Math.min(text.length(), 15000));
+    CONTENT:
+    "%s"
 
-        // Improved Prompt with detailed structure
-        String prompt = """
-    You are an AEO optimization expert.
-    
-    Analyze the content and respond with ONLY valid JSON using this EXACT structure:
-    
+    ---
+    REQUIRED JSON OUTPUT FORMAT:
     {
-      "score": { "total": 85, "seo": 90, "readability": 80, "technical": 82 },
-      "audits": [ ... ],
-      "suggestions": [ ... ],
-      "comparison": { "topRanking": 92, "industryAverage": 68 }
+        "score": {
+            "overall": 85,
+            "structure": 80,
+            "readability": 90,
+            "seo": 85
+        },
+        "audits": [
+            {
+                "title": "Title Optimization", 
+                "label": "Title Optimization", 
+                "status": "passed",
+                "score": 100,
+                "description": "Title is concise."
+            },
+            {
+                "title": "Heading Structure",
+                "label": "Heading Structure",
+                "status": "warning",
+                "score": 60,
+                "description": "H1 present but hierarchy skipped."
+            },
+            {
+                "title": "Schema Markup",
+                "label": "Schema Markup",
+                "status": "failed",
+                "score": 0,
+                "description": "No schema found."
+            }
+        ],
+        "suggestions": [
+            {
+                "type": "STRUCTURE",
+                "title": "Fix Headings",
+                "description": "Ensure H1 is followed by H2.",
+                "codeSnippet": "<h1>Main Title</h1>\\n<h2>Subheading</h2>\\n<p>Content...</p>"
+            },
+            {
+                "type": "CONTENT",
+                "title": "Add Examples",
+                "description": "Include real-world scenarios.",
+                "codeSnippet": "### Example Scenario\\nHere is a practical example of how this works..."
+            }
+        ],
+        "comparison": {
+            "topRanking": 92,
+            "industryAverage": 68
+        }
     }
-    
-    CRITICAL RULES FOR SUGGESTIONS:
-    - You MUST include exactly these fields in EVERY suggestion: priority, category, description, code
-    - The "code" field is MANDATORY and can NEVER be empty or missing
-    - For schema/meta: provide full HTML/JSON-LD code
-    - For content/structure: provide example text or HTML snippet
-    - For general advice: write "// Manual implementation required" followed by example
-    
-    Examples:
-    "code": "<meta name=\\"description\\" content=\\"Your summary\\">"
-    "code": "<h2>Why do powerful films fail at box office?</h2>"
-    "code": "// Manual: Break long paragraphs into 3-4 sentence chunks"
-    
-    Content:
-    %s
-    """.formatted(limitedText);
+    """, content.replace("\"", "'").substring(0, Math.min(content.length(), 20000)));
 
-        Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("model", modelName);
-        requestBody.put("messages", List.of(
-                Map.of("role", "system", "content", "You are a helpful assistant."),
-                Map.of("role", "user", "content", prompt)
-        ));
+            Map<String, Object> requestBody = new HashMap<>();
+            requestBody.put("model", modelName);
+            requestBody.put("messages", List.of(
+                    Map.of("role", "user", "content", prompt)
+            ));
 
-        // Force JSON format
-        requestBody.put("response_format", Map.of("type", "json_object"));
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            headers.set("Authorization", "Bearer " + apiKey);
+            headers.set("HTTP-Referer", "http://localhost:3000");
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
 
-        log.info("🔄 Calling OpenRouter Model: {}", modelName);
+            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, entity, String.class);
 
-        ResponseEntity<String> response = restTemplate.postForEntity(API_URL, entity, String.class);
+            return extractTextFromOpenRouterResponse(response.getBody());
 
-        // Extract Content from OpenAI-style response
-        JsonNode root = objectMapper.readTree(response.getBody());
-        return root.path("choices").path(0).path("message").path("content").asText();
+        } catch (Exception e) {
+            log.error("❌ OpenRouter Failed for model {}: {}", modelName, e.getMessage());
+            throw new RuntimeException("AI Service Unavailable");
+        }
+    }
+
+    private String extractTextFromOpenRouterResponse(String jsonResponse) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(jsonResponse);
+            return root.path("choices").get(0).path("message").path("content").asText();
+        } catch (Exception e) {
+            return jsonResponse;
+        }
     }
 }

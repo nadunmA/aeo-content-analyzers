@@ -2,65 +2,49 @@ import { useState } from "react";
 import PropTypes from "prop-types";
 import { Icons } from "../constants";
 
-// Comparison Component
+// --- Helper: Check if code is valid to show ---
+const hasValidCode = (code) => {
+  if (!code) return false;
+  if (code === "null") return false;
+  if (code.trim() === "") return false;
+  if (code.toLowerCase().includes("no specific code")) return false;
+  return true;
+};
+
+// --- Comparison Section ---
 const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
   const scoreDiff = topRanking - yourScore;
-  const vsIndustry = yourScore - industryAverage;
 
   return (
     <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 p-6 shadow-sm">
       <h3 className="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center gap-2">
         📊 Competitive Analysis
       </h3>
-
       <div className="space-y-4">
-        {/* Your Score Bar */}
-        <div className="flex items-center gap-4">
-          <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Your Content
-          </span>
-          <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-            <div
-              className="h-full bg-indigo-600 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
-              style={{ width: `${Math.min(yourScore, 100)}%` }}
-            >
-              {yourScore}
+        {[
+          { label: "Your Content", value: yourScore, color: "bg-indigo-600" },
+          { label: "Top Ranking", value: topRanking, color: "bg-emerald-500" },
+          {
+            label: "Industry Avg",
+            value: industryAverage,
+            color: "bg-gray-400",
+          },
+        ].map((item, idx) => (
+          <div key={idx} className="flex items-center gap-4">
+            <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
+              {item.label}
+            </span>
+            <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
+              <div
+                className={`h-full ${item.color} flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out`}
+                style={{ width: `${Math.min(item.value || 0, 100)}%` }}
+              >
+                {item.value}
+              </div>
             </div>
           </div>
-        </div>
-
-        {/* Top Ranking Bar */}
-        <div className="flex items-center gap-4">
-          <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Top Ranking
-          </span>
-          <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-            <div
-              className="h-full bg-emerald-500 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
-              style={{ width: `${Math.min(topRanking, 100)}%` }}
-            >
-              {topRanking}
-            </div>
-          </div>
-        </div>
-
-        {/* Industry Average Bar */}
-        <div className="flex items-center gap-4">
-          <span className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
-            Industry Avg
-          </span>
-          <div className="flex-1 h-8 bg-gray-100 dark:bg-gray-800 rounded-lg overflow-hidden">
-            <div
-              className="h-full bg-gray-400 flex items-center justify-end pr-3 text-white text-sm font-bold transition-all duration-1000 ease-out"
-              style={{ width: `${Math.min(industryAverage, 100)}%` }}
-            >
-              {industryAverage}
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
-
-      {/* Gap Analysis Text */}
       <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800">
         <div className="flex items-start gap-3">
           <Icons.AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
@@ -73,22 +57,11 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
                 <>
                   You're <span className="font-bold">{scoreDiff} points</span>{" "}
                   behind the top-ranking page.
-                  {vsIndustry > 0 && (
-                    <>
-                      {" "}
-                      However, you're{" "}
-                      <span className="font-bold">
-                        {vsIndustry} points above
-                      </span>{" "}
-                      industry average!
-                    </>
-                  )}
                 </>
               ) : (
                 <>
-                  🎉 Excellent! You're{" "}
-                  <span className="font-bold">matching or exceeding</span>{" "}
-                  top-ranking content!
+                  🎉 Excellent! You're matching or exceeding top-ranking
+                  content!
                 </>
               )}
             </p>
@@ -100,29 +73,47 @@ const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
 };
 
 ComparisonSection.propTypes = {
-  yourScore: PropTypes.number.isRequired,
-  industryAverage: PropTypes.number.isRequired,
-  topRanking: PropTypes.number.isRequired,
+  yourScore: PropTypes.number,
+  industryAverage: PropTypes.number,
+  topRanking: PropTypes.number,
 };
 
-// Main Results Component
+// --- Main Results Component ---
 const Results = ({ result, onBack }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
 
   if (!result) return null;
 
-  // Helper Functions
-  const getScoreColor = (score) => {
-    if (score >= 80) return "text-emerald-500";
-    if (score >= 50) return "text-amber-500";
-    return "text-rose-500";
-  };
+  // 1. Safe Data Access & TOTAL SCORE FIX
+  // Backend sends 'seo', 'structure', 'readability'
+  const schemaScore = result?.score?.schema ?? result?.score?.seo ?? 0;
+  const structureScore =
+    result?.score?.structure ?? result?.score?.technical ?? 0;
+  const readabilityScore = result?.score?.readability ?? 0;
 
-  const getScoreBg = (score) => {
-    if (score >= 80) return "bg-emerald-500";
-    if (score >= 50) return "bg-amber-500";
-    return "bg-rose-500";
-  };
+  // FIX: Check 'total' OR 'overall' from backend
+  let totalScore = result?.score?.total ?? result?.score?.overall ?? 0;
+
+  // Fallback calculation if total is 0
+  if (totalScore === 0 && (schemaScore > 0 || structureScore > 0)) {
+    totalScore = Math.round(
+      (schemaScore + structureScore + readabilityScore) / 3
+    );
+  }
+
+  // Helpers
+  const getScoreColor = (score) =>
+    score >= 80
+      ? "text-emerald-500"
+      : score >= 50
+      ? "text-amber-500"
+      : "text-rose-500";
+  const getScoreBg = (score) =>
+    score >= 80
+      ? "bg-emerald-500"
+      : score >= 50
+      ? "bg-amber-500"
+      : "bg-rose-500";
 
   const getScoreBadge = (score) => {
     if (score >= 80)
@@ -144,42 +135,6 @@ const Results = ({ result, onBack }) => {
     };
   };
 
-  const copyToClipboard = async (text, index) => {
-    if (!text) return;
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopiedIndex(index);
-      setTimeout(() => setCopiedIndex(null), 2000);
-    } catch (err) {
-      console.error("Failed to copy:", err);
-    }
-  };
-
-  // Safe Data Access
-  const schemaScore = result?.score?.schema ?? result?.score?.seo ?? 0;
-  const structureScore =
-    result?.score?.structure ?? result?.score?.technical ?? 0;
-  const readabilityScore = result?.score?.readability ?? 0;
-  const totalScore = result?.score?.total ?? 0;
-
-  const scoreMetrics = [
-    {
-      label: "Schema Markup",
-      value: schemaScore,
-      icon: <Icons.CheckCircle className="w-4 h-4" />,
-    },
-    {
-      label: "Structure & Q&A",
-      value: structureScore,
-      icon: <Icons.FileText className="w-4 h-4" />,
-    },
-    {
-      label: "Information Density",
-      value: readabilityScore,
-      icon: <Icons.Search className="w-4 h-4" />,
-    },
-  ];
-
   const statusConfig = {
     pass: {
       icon: <Icons.CheckCircle className="w-5 h-5" />,
@@ -198,15 +153,53 @@ const Results = ({ result, onBack }) => {
     },
   };
 
+  const getAuditConfig = (status) => {
+    const s = status?.toString().toLowerCase() || "fail";
+    if (s.includes("pass")) return statusConfig.pass;
+    if (s.includes("warn")) return statusConfig.warning;
+    return statusConfig.fail;
+  };
+
+  const copyToClipboard = async (text, index) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
   const overallBadge = getScoreBadge(totalScore);
+  const scoreMetrics = [
+    {
+      label: "Schema Markup",
+      value: schemaScore,
+      icon: <Icons.CheckCircle className="w-4 h-4" />,
+    },
+    {
+      label: "Structure & Q&A",
+      value: structureScore,
+      icon: <Icons.FileText className="w-4 h-4" />,
+    },
+    {
+      label: "Information Density",
+      value: readabilityScore,
+      icon: <Icons.Search className="w-4 h-4" />,
+    },
+  ];
 
   const auditSummary = {
-    passed: result.audits?.filter((a) => a.status === "pass").length ?? 0,
+    passed:
+      result.audits?.filter((a) => a.status?.toLowerCase().includes("pass"))
+        .length ?? 0,
     warnings:
-      result.audits?.filter(
-        (a) => a.status === "warning" || a.status === "warn"
-      ).length ?? 0,
-    failed: result.audits?.filter((a) => a.status === "fail").length ?? 0,
+      result.audits?.filter((a) => a.status?.toLowerCase().includes("warn"))
+        .length ?? 0,
+    failed:
+      result.audits?.filter((a) => a.status?.toLowerCase().includes("fail"))
+        .length ?? 0,
   };
 
   return (
@@ -220,7 +213,7 @@ const Results = ({ result, onBack }) => {
           >
             <span className="rotate-180 group-hover:-translate-x-1 transition-transform">
               <Icons.ArrowRight />
-            </span>
+            </span>{" "}
             Back to Analyzer
           </button>
           <h2 className="text-4xl font-extrabold text-gray-900 dark:text-white mb-2">
@@ -240,7 +233,6 @@ const Results = ({ result, onBack }) => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Left Column: Scores */}
         <div className="lg:col-span-1 space-y-6">
-          {/* Overall Score Card */}
           <div className="bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-800 rounded-3xl border border-gray-200 dark:border-gray-800 p-8 shadow-lg">
             <div className="text-center mb-8">
               <p className="text-sm uppercase tracking-widest font-bold text-gray-400 dark:text-gray-500 mb-2">
@@ -252,8 +244,6 @@ const Results = ({ result, onBack }) => {
                 {overallBadge.label}
               </span>
             </div>
-
-            {/* Circular Progress */}
             <div className="relative w-48 h-48 mx-auto mb-8">
               <svg className="w-full h-full transform -rotate-90">
                 <circle
@@ -292,8 +282,6 @@ const Results = ({ result, onBack }) => {
                 </span>
               </div>
             </div>
-
-            {/* Score Breakdown */}
             <div className="space-y-5">
               {scoreMetrics.map((metric, idx) => (
                 <div key={idx}>
@@ -327,65 +315,66 @@ const Results = ({ result, onBack }) => {
             </div>
           </div>
 
-          {/* Quick Stats Summary */}
           <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-6">
             <h4 className="text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">
               Audit Summary
             </h4>
             <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icons.CheckCircle className="w-4 h-4 text-emerald-500" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Passed
+              {[
+                {
+                  label: "Passed",
+                  value: auditSummary.passed,
+                  color: "text-emerald-600",
+                  icon: (
+                    <Icons.CheckCircle className="w-4 h-4 text-emerald-500" />
+                  ),
+                },
+                {
+                  label: "Warnings",
+                  value: auditSummary.warnings,
+                  color: "text-amber-600",
+                  icon: (
+                    <Icons.AlertCircle className="w-4 h-4 text-amber-500" />
+                  ),
+                },
+                {
+                  label: "Failed",
+                  value: auditSummary.failed,
+                  color: "text-rose-600",
+                  icon: <Icons.XCircle className="w-4 h-4 text-rose-500" />,
+                },
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {item.icon}
+                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                      {item.label}
+                    </span>
+                  </div>
+                  <span className={`font-bold ${item.color}`}>
+                    {item.value}
                   </span>
                 </div>
-                <span className="font-bold text-emerald-600">
-                  {auditSummary.passed}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icons.AlertCircle className="w-4 h-4 text-amber-500" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Warnings
-                  </span>
-                </div>
-                <span className="font-bold text-amber-600">
-                  {auditSummary.warnings}
-                </span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Icons.XCircle className="w-4 h-4 text-rose-500" />
-                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                    Failed
-                  </span>
-                </div>
-                <span className="font-bold text-rose-600">
-                  {auditSummary.failed}
-                </span>
-              </div>
+              ))}
             </div>
           </div>
         </div>
 
         {/* Right Column: Detailed Audit & Suggestions */}
         <div className="lg:col-span-2 space-y-8">
-          {/* Competitive Analysis */}
           <ComparisonSection
             yourScore={totalScore}
             industryAverage={result.comparison?.industryAverage || 68}
             topRanking={result.comparison?.topRanking || 92}
           />
 
-          {/* ✅ DETAILED AUDIT REPORT (FIXED) */}
+          {/* Audit List */}
           <div className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm">
             <div className="p-6 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-950/20 dark:to-violet-950/20">
               <h3 className="font-bold text-lg flex items-center gap-2 text-gray-900 dark:text-white">
                 <div className="p-2 bg-indigo-100 dark:bg-indigo-900/30 rounded-lg text-indigo-600 dark:text-indigo-400">
                   <Icons.CheckCircle className="w-5 h-5" />
-                </div>
+                </div>{" "}
                 Detailed Audit Report
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 ml-11">
@@ -394,19 +383,7 @@ const Results = ({ result, onBack }) => {
             </div>
             <div className="divide-y divide-gray-100 dark:divide-gray-800">
               {(result.audits || []).map((audit, idx) => {
-                const normalizedStatus =
-                  audit.status === "warn" ? "warning" : audit.status;
-                const config =
-                  statusConfig[normalizedStatus] || statusConfig.fail;
-
-                // Fallback for missing fields
-                const auditTitle =
-                  audit.title || audit.name || audit.audit || "Untitled Check";
-                const auditDesc =
-                  audit.description ||
-                  audit.explanation ||
-                  "No description provided.";
-
+                const config = getAuditConfig(audit.status);
                 return (
                   <div
                     key={idx}
@@ -420,7 +397,7 @@ const Results = ({ result, onBack }) => {
                     <div className="flex-1">
                       <div className="flex items-start justify-between gap-4 mb-2">
                         <h4 className="font-bold text-sm text-gray-900 dark:text-white">
-                          {auditTitle}
+                          {audit.title || audit.name || "Untitled Check"}
                         </h4>
                         <span
                           className={`flex-shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide ${config.bg} ${config.color}`}
@@ -429,7 +406,9 @@ const Results = ({ result, onBack }) => {
                         </span>
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
-                        {auditDesc}
+                        {audit.description ||
+                          audit.explanation ||
+                          "No description provided."}
                       </p>
                     </div>
                   </div>
@@ -438,7 +417,7 @@ const Results = ({ result, onBack }) => {
             </div>
           </div>
 
-          {/* ✅ SMART SUGGESTIONS (FIXED UI) */}
+          {/* Suggestions */}
           <div>
             <div className="flex items-center justify-between mb-6">
               <div>
@@ -455,27 +434,29 @@ const Results = ({ result, onBack }) => {
             </div>
 
             <div className="space-y-6">
-              {(result.suggestions || []).map((sug, idx) => (
-                <div
-                  key={idx}
-                  className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-800 transition-all"
-                >
-                  <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/30">
-                    <div className="flex items-center gap-3">
-                      <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs uppercase tracking-wider font-bold">
-                        {sug.type || "general"}
-                      </span>
-                      <h4 className="font-bold text-sm text-gray-900 dark:text-white">
-                        {sug.title || "Optimization Suggestion"}
-                      </h4>
-                    </div>
+              {(result.suggestions || []).map((sug, idx) => {
+                // DATA FIX: Check both 'code' and 'codeSnippet'
+                const code = sug.code || sug.codeSnippet;
+                const showCode = hasValidCode(code);
 
-                    {/* Only show copy button if there is actual code */}
-                    {sug.code &&
-                      sug.code !== "null" &&
-                      !sug.code.includes("No specific code") && (
+                return (
+                  <div
+                    key={idx}
+                    className="bg-white dark:bg-gray-900 rounded-3xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-lg hover:border-indigo-200 dark:hover:border-indigo-800 transition-all"
+                  >
+                    <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50/50 dark:bg-gray-800/30">
+                      <div className="flex items-center gap-3">
+                        <span className="px-3 py-1 bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-xs uppercase tracking-wider font-bold">
+                          {sug.type || "general"}
+                        </span>
+                        <h4 className="font-bold text-sm text-gray-900 dark:text-white">
+                          {sug.title || "Optimization Suggestion"}
+                        </h4>
+                      </div>
+                      {/* Only show Copy button if valid code exists */}
+                      {showCode && (
                         <button
-                          onClick={() => copyToClipboard(sug.code, idx)}
+                          onClick={() => copyToClipboard(code, idx)}
                           className="p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-all text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400 active:scale-90 group relative"
                           title="Copy code"
                         >
@@ -489,43 +470,37 @@ const Results = ({ result, onBack }) => {
                           </span>
                         </button>
                       )}
-                  </div>
+                    </div>
+                    <div className="p-6">
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed flex items-start gap-2">
+                        <Icons.AlertCircle className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
+                        <span className="italic">
+                          {sug.explanation || sug.description}
+                        </span>
+                      </p>
 
-                  <div className="p-6">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-5 leading-relaxed flex items-start gap-2">
-                      <Icons.AlertCircle className="w-4 h-4 text-indigo-500 mt-0.5 flex-shrink-0" />
-                      <span className="italic">
-                        {sug.explanation || sug.description}
-                      </span>
-                    </p>
-
-                    {/* ✅ CONDITIONAL CODE BLOCK RENDER */}
-                    {sug.code &&
-                    sug.code !== "null" &&
-                    !sug.code.includes("No specific code") ? (
-                      <div className="relative group/code">
-                        <div className="absolute -top-3 left-4 px-2 bg-slate-50 dark:bg-gray-900 text-[10px] font-bold tracking-wider text-indigo-500 uppercase border border-indigo-100 dark:border-indigo-900/50 rounded z-10">
-                          Code Suggestion
+                      {/* Render Code Block or Fallback Message */}
+                      {showCode ? (
+                        <div className="relative group/code">
+                          <div className="absolute -top-3 left-4 px-2 bg-slate-50 dark:bg-gray-900 text-[10px] font-bold tracking-wider text-indigo-500 uppercase border border-indigo-100 dark:border-indigo-900/50 rounded z-10">
+                            Code Suggestion
+                          </div>
+                          <pre className="p-6 bg-[#0d1117] text-gray-300 border border-gray-800 rounded-2xl overflow-x-auto text-xs font-mono leading-relaxed shadow-inner">
+                            <code>{code}</code>
+                          </pre>
                         </div>
-                        <pre className="p-6 bg-[#0d1117] text-gray-300 border border-gray-800 rounded-2xl overflow-x-auto text-xs font-mono leading-relaxed shadow-inner">
-                          <code>{sug.code}</code>
-                        </pre>
-                        <div className="absolute top-4 right-4 opacity-0 group-hover/code:opacity-100 transition-opacity">
-                          <span className="text-[10px] bg-slate-200 dark:bg-gray-800 px-2.5 py-1 rounded-md text-slate-600 dark:text-gray-400 uppercase font-bold tracking-wider shadow-sm">
-                            {sug.type || "general"}
-                          </span>
+                      ) : (
+                        <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-xs text-gray-500 italic flex items-center gap-2">
+                          {/* ICON FIX: Use AlertCircle instead of Info */}
+                          <Icons.AlertCircle className="w-4 h-4" /> No code
+                          snippet required for this fix. Check the explanation
+                          above.
                         </div>
-                      </div>
-                    ) : (
-                      // Fallback visual if no code is needed
-                      <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-xs text-gray-500 italic">
-                        No code snippet required for this fix. Check the
-                        explanation above.
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
@@ -534,25 +509,8 @@ const Results = ({ result, onBack }) => {
   );
 };
 
-// PropTypes (Optional/Loose to prevent crashes)
 Results.propTypes = {
-  result: PropTypes.shape({
-    title: PropTypes.string,
-    score: PropTypes.shape({
-      total: PropTypes.number,
-      schema: PropTypes.number,
-      seo: PropTypes.number,
-      structure: PropTypes.number,
-      technical: PropTypes.number,
-      readability: PropTypes.number,
-    }),
-    comparison: PropTypes.shape({
-      topRanking: PropTypes.number,
-      industryAverage: PropTypes.number,
-    }),
-    audits: PropTypes.array,
-    suggestions: PropTypes.array,
-  }),
+  result: PropTypes.object,
   onBack: PropTypes.func.isRequired,
 };
 
