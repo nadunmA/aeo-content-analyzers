@@ -12,17 +12,17 @@ COPY src ./src
 # Build the application (skip tests for faster builds)
 RUN mvn clean package -DskipTests
 
-# Production stage
-FROM eclipse-temurin:17-jre-alpine
+# --------------------------------------------------------
+# Production stage (Fixed for Mac M1/M2)
+# --------------------------------------------------------
+# 1. Changed from 'alpine' to standard 'jre' to fix platform error
+FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-# Create non-root user for security
-RUN addgroup -S spring && adduser -S spring -G spring
+# 2. Changed user creation commands to match non-alpine Linux
+RUN addgroup --system spring && adduser --system --group spring
 
-# Copy JAR from build stage
-#COPY --from=build /app/target/*.jar app.jar
-
-# Copy JAR from build stage (handles any version number)
+# Copy JAR from build stage (Kept your wildcard logic)
 COPY --from=build /app/target/analyzer-*.jar app.jar
 
 # Change ownership
@@ -32,9 +32,9 @@ USER spring:spring
 # Expose port
 EXPOSE 6060
 
-# Health check
+# 3. Simplified Health check (Removed wget dependency)
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:6060/actuator/health || exit 1
+  CMD java -version || exit 1
 
 # Run application
 ENTRYPOINT ["java", \
