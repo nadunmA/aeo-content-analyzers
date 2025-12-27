@@ -32,7 +32,12 @@ services:
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      MONGODB_URI: mongodb://${MONGO_USERNAME:-admin}:${MONGO_PASSWORD:-admin123}@mongodb:27017/aeo_analyzer?authSource=admin
+      SPRING_DATA_MONGODB_HOST: mongodb
+      SPRING_DATA_MONGODB_PORT: 27017
+      SPRING_DATA_MONGODB_DATABASE: aeo_analyzer
+      SPRING_DATA_MONGODB_USERNAME: ${MONGO_USERNAME:-admin}
+      SPRING_DATA_MONGODB_PASSWORD: ${MONGO_PASSWORD:-admin123}
+      SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: admin
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
       APP_USERNAME: ${APP_USERNAME:-admin}
@@ -46,12 +51,6 @@ services:
         condition: service_healthy
     networks:
       - aeo-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6060/actuator/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
     # Optional: Mount application.properties if you want to use file-based config
     # volumes:
     #   - ./backend/src/main/resources/application.properties:/app/application.properties:ro
@@ -64,16 +63,17 @@ services:
     container_name: aeo-frontend
     restart: unless-stopped
     ports:
-      - "3000:80"
+      - "2000:80"
     depends_on:
       - backend
     networks:
       - aeo-network
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 5s
       retries: 3
+      start_period: 10s
 
 networks:
   aeo-network:
