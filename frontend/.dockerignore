@@ -11,3 +11,4 @@ build/
 README.md
 .vscode/
 .idea/
+.env.*
