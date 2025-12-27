@@ -43,7 +43,7 @@ public class GlobalExceptionHandler {
 
         log.error("❌ Unexpected error occurred: ", ex);
 
-      
+
         ErrorResponse response = new ErrorResponse(
                 "INTERNAL_SERVER_ERROR",
                 "Something went wrong processing your request. Please try again later."
