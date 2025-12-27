@@ -10,9 +10,9 @@ export const analyzeContent = async (inputValue, type) => {
         "Content-Type": "application/json",
       },
 
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         text: inputValue,
-        type: type 
+        type: type
       }),
 
     });
@@ -32,7 +32,7 @@ export const analyzeContent = async (inputValue, type) => {
       title: data.title || (inputValue.substring(0, 30) + "..."),
       type: type,
       content: inputValue,
-   
+
       ...data
     };
 
@@ -42,4 +42,3 @@ export const analyzeContent = async (inputValue, type) => {
   }
 
 }
-

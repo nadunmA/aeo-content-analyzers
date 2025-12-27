@@ -51,8 +51,8 @@ public class OpenRouterService {
         },
         "audits": [
             {
-                "title": "Title Optimization", 
-                "label": "Title Optimization", 
+                "title": "Title Optimization",
+                "label": "Title Optimization",
                 "status": "passed",
                 "score": 100,
                 "description": "Title is concise."

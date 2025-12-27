@@ -48,9 +48,9 @@ public class GeminiService {
             - Schema Markup (structured data)
             - Structure & Q&A (headings, lists, questions)
             - Readability (clarity, engagement)
-            
+
             Provide scores (0-100) and detailed audits/suggestions in strict JSON.
-            
+
             CONTENT TO ANALYZE:
             ===================
             %s
