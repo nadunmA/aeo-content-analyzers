@@ -2,41 +2,36 @@
 FROM maven:3.9-eclipse-temurin-17 AS build
 WORKDIR /app
 
-# Copy pom.xml and download dependencies (caching)
-COPY pom.xml .
+# 1. pom.xml එක analyzer ෆෝල්ඩරයෙන් ගන්න (Fix applied here)
+COPY analyzer/pom.xml .
 RUN mvn dependency:go-offline -B
 
-# Copy source code
-COPY src ./src
+# 2. src ෆෝල්ඩරයත් analyzer එකෙන් ගන්න (Fix applied here)
+COPY analyzer/src ./src
 
-# Build the application (skip tests for faster builds)
+# Build the application
 RUN mvn clean package -DskipTests
 
-# --------------------------------------------------------
-# Production stage (Fixed for Mac M1/M2)
-# --------------------------------------------------------
-# 1. Changed from 'alpine' to standard 'jre' to fix platform error
+# Production stage (Mac M1/M2 Compatible)
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-# 2. Changed user creation commands to match non-alpine Linux
+# Create system user
 RUN addgroup --system spring && adduser --system --group spring
 
-# Copy JAR from build stage (Kept your wildcard logic)
+# Copy JAR from build stage
 COPY --from=build /app/target/analyzer-*.jar app.jar
 
-# Change ownership
+# Permissions
 RUN chown -R spring:spring /app
 USER spring:spring
 
-# Expose port
 EXPOSE 6060
 
-# 3. Simplified Health check (Removed wget dependency)
+# Simple Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
   CMD java -version || exit 1
 
-# Run application
 ENTRYPOINT ["java", \
   "-XX:+UseContainerSupport", \
   "-XX:MaxRAMPercentage=75.0", \

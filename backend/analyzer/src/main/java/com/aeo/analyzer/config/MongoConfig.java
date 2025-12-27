@@ -1,6 +1,3 @@
-// FILE: src/main/java/com/aeo/analyzer/config/MongoConfig.java
-// 🔄 REPLACE YOUR CURRENT MongoConfig.java WITH THIS
-
 package com.aeo.analyzer.config;
 
 import com.mongodb.ConnectionString;
@@ -19,24 +16,40 @@ import java.util.concurrent.TimeUnit;
 @Configuration
 public class MongoConfig {
 
-    @Value("${spring.data.mongodb.uri}")
-    private String mongoUri;
+    @Value("${spring.data.mongodb.host:localhost}")
+    private String host;
 
-    @Value("${spring.data.mongodb.database:aeo_content_analyzer}")
-    private String databaseName;
+    @Value("${spring.data.mongodb.port:27017}")
+    private String port;
+
+    @Value("${spring.data.mongodb.database:aeo_analyzer}")
+    private String database;
+
+    @Value("${spring.data.mongodb.username:admin}")
+    private String username;
+
+    @Value("${spring.data.mongodb.password:admin123}")
+    private String password;
+
+    @Value("${spring.data.mongodb.authentication-database:admin}")
+    private String authDatabase;
 
     @Bean
     public MongoClient mongoClient() {
         try {
             log.info("Initializing MongoDB connection...");
+            log.info("MongoDB Host: {}:{}", host, port);
+            log.info("MongoDB Database: {}", database);
 
-            ConnectionString connectionString = new ConnectionString(mongoUri);
+            String connectionString = String.format(
+                    "mongodb://%s:%s@%s:%s/%s?authSource=%s",
+                    username, password, host, port, database, authDatabase
+            );
 
             MongoClientSettings settings = MongoClientSettings.builder()
-                    .applyConnectionString(connectionString)
+                    .applyConnectionString(new ConnectionString(connectionString))
                     .applyToSslSettings(builder -> {
-                        builder.enabled(true);
-                        builder.invalidHostNameAllowed(false);
+                        builder.enabled(false);  // ✅ SSL disabled
                     })
                     .applyToSocketSettings(builder ->
                             builder.connectTimeout(20, TimeUnit.SECONDS)
@@ -65,7 +78,7 @@ public class MongoConfig {
 
     @Bean
     public MongoTemplate mongoTemplate(MongoClient mongoClient) {
-        log.info("Creating MongoTemplate for database: {}", databaseName);
-        return new MongoTemplate(mongoClient, databaseName);
+        log.info("Creating MongoTemplate for database: {}", database);
+        return new MongoTemplate(mongoClient, database);
     }
 }
