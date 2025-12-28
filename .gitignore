@@ -41,3 +41,7 @@ README.md
 .vscode/
 .idea/
 .env.*
+
+echo ".env" >> .gitignore
+echo "*.env" >> .gitignore
+echo "!.env.example" >> .gitignore

@@ -75,6 +75,29 @@ services:
       retries: 3
       start_period: 10s
 
+# SonarQube Service
+  sonarqube:
+    image: sonarqube:community
+    container_name: aeo-sonarqube
+    restart: unless-stopped
+    environment:
+      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: true
+    ports:
+      - "9000:9000"
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    networks:
+      - aeo-network
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/api/system/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+
 networks:
   aeo-network:
     driver: bridge
@@ -83,4 +106,10 @@ volumes:
   mongodb_data:
     driver: local
   mongodb_config:
+    driver: local
+  sonarqube_data:
+    driver: local
+  sonarqube_logs:
+    driver: local
+  sonarqube_extensions:
     driver: local
