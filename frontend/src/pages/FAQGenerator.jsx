@@ -132,7 +132,6 @@ const FAQGenerator = ({ onBack }) => {
 
   return (
     <div className="max-w-6xl mx-auto py-10 px-4 relative">
-      {/* ✅ UPDATED: Toast දැන් එන්නේ උඩින් (Top Center) */}
       <div
         className={`fixed top-6 left-1/2 transform -translate-x-1/2 z-[100] transition-all duration-500 ease-out ${
           toast.show

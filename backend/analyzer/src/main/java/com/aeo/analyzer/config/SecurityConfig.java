@@ -25,24 +25,24 @@ public class SecurityConfig {
         log.info("Configuring Security Filter Chain...");
 
         http
-                // 1. CSRF Disable (REST API නිසා)
+                // CSRF Disable (REST API )
                 .csrf(csrf -> csrf.disable())
 
-                // 2. CORS Enable
+                // CORS Enable
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
 
-                // 3. Stateless Session
+                // Stateless Session
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-                // 4. Authorization Rules (URL Fix is here! 👇)
+                // Authorization Rules
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/v1/content/**").permitAll() // ✅ Added /v1/
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
 
-                // 5. Security Headers (Merged from WebConfig)
+                // Security Headers (Merged from WebConfig)
                 .headers(headers -> headers
                                 .xssProtection(xss -> xss
                                         .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)
@@ -51,8 +51,7 @@ public class SecurityConfig {
                                 .contentSecurityPolicy(csp -> csp
                                         .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; frame-src 'none'")
                                 )
-                        // Permissions Policy header එක Spring Security වලින් දාන්න අමාරු නිසා
-                        // අපි ඒක Nginx වලින් පස්සේ දාමු. දැනට මේ ඇති.
+
                 );
 
         log.info("✅ Security configuration completed");
@@ -79,7 +78,7 @@ public class SecurityConfig {
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        // ✅ CORS path එකත් Version එකට ගැලපෙන්න හැදුවා
+
         source.registerCorsConfiguration("/**", configuration);
 
         return source;

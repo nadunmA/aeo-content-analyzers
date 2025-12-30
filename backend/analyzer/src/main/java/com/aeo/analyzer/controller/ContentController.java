@@ -48,7 +48,7 @@ public class ContentController {
     public ResponseEntity<Object> analyze(@Valid @RequestBody AnalyzeRequest request,
                                           HttpServletRequest httpServletRequest) {
         String clientIp = httpServletRequest.getRemoteAddr();
-        // ✅ FIX 1: Ensure Type is always lowercase ("URL" -> "url")
+
         String requestType = request.getType() != null ? request.getType().toLowerCase() : "text";
         String contentToProcess = request.getText();
 
@@ -76,7 +76,7 @@ public class ContentController {
             // Call AI
             String aiJson = modelRouterService.analyzeWithFailover(contentToAnalyze);
 
-            // --- JSON CLEANING ---
+            // JSON CLEANING
             String cleanedJson = aiJson.trim()
                     .replaceAll("^```json\\s*", "").replaceAll("^```\\s*", "").replaceAll("\\s*```$", "");
 
@@ -141,7 +141,7 @@ public class ContentController {
             // ==========================================
             AuditReport report = new AuditReport();
 
-            // ✅ FIX 2: Truncate Title to 190 chars (Max 200 allowed)
+            // Truncate Title to 190 chars
             String finalTitle;
             if ("url".equals(requestType)) {
                 finalTitle = (extractedTitle != null && !extractedTitle.isEmpty()) ? extractedTitle : contentToProcess;
@@ -151,7 +151,7 @@ public class ContentController {
             if (finalTitle.length() > 190) finalTitle = finalTitle.substring(0, 190) + "...";
             report.setTitle(finalTitle);
 
-            // ✅ FIX 3: Truncate Content to 99,000 chars (Max 100,000 allowed)
+            // Truncate Content to 99,000 chars
             String finalContent = request.getText();
             if (finalContent != null && finalContent.length() > 99000) {
                 finalContent = finalContent.substring(0, 99000) + "... (truncated)";
@@ -176,7 +176,7 @@ public class ContentController {
             return ResponseEntity.ok(repository.save(report));
 
         } catch (Exception e) {
-            // 🔥 Log the REAL error if saving fails
+            // Log the REAL error if saving fails
             log.error("❌ CRITICAL ERROR: Analysis/Save failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Analysis failed", "message", e.getMessage()));

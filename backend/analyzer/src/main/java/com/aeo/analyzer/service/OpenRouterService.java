@@ -1,11 +1,10 @@
 package com.aeo.analyzer.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -20,109 +19,115 @@ public class OpenRouterService {
     @Value("${openrouter.api.key}")
     private String apiKey;
 
-    private final String apiUrl = "https://openrouter.ai/api/v1/chat/completions";
-    private final RestTemplate restTemplate = new RestTemplate();
+    private static final String API_URL =
+            "https://openrouter.ai/api/v1/chat/completions";
+
+    private final RestTemplate restTemplate;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public OpenRouterService(RestTemplate restTemplate) {
+        this.restTemplate = restTemplate;
+    }
 
     public String analyzeContent(String content, String modelName) {
         try {
-            log.info("🔄 Calling OpenRouter Model: {}", modelName);
+            log.info("🔄 Calling OpenRouter model: {}", modelName);
 
-            // ✅ FIX: Prompt uses lowercase 'passed', 'warning', 'failed' strictly!
+            // Safe content handling
+            String safeContent = content.replace("\"", "'");
+            safeContent = safeContent.substring(
+                    0, Math.min(safeContent.length(), 20_000)
+            );
+
             String prompt = String.format("""
-    You are an expert AEO Auditor. Analyze the content and return a STRICT JSON response.
+You are an expert AEO Auditor. Analyze the content and return ONLY valid JSON.
 
-    CRITICAL INSTRUCTIONS:
-    1. For the 'suggestions' array, the 'codeSnippet' field MUST NEVER BE NULL.
-    2. If the suggestion is about content (e.g., "Add more examples"), provide a Markdown example of the improved content in 'codeSnippet'.
-    3. If the suggestion is technical/SEO, provide the HTML/CSS/JS code.
-    4. Force generation of a valid string for 'codeSnippet' in all cases.
+CRITICAL RULES:
+1. 'status' MUST be lowercase: passed | warning | failed
+2. 'codeSnippet' MUST NEVER be null
+3. Content suggestions → Markdown example
+4. Technical suggestions → HTML/CSS/JS
+5. NO explanations outside JSON
 
-    CONTENT:
-    "%s"
+CONTENT:
+"%s"
 
-    ---
-    REQUIRED JSON OUTPUT FORMAT:
+REQUIRED JSON FORMAT:
+{
+  "score": {
+    "overall": 85,
+    "structure": 80,
+    "readability": 90,
+    "seo": 85
+  },
+  "audits": [
     {
-        "score": {
-            "overall": 85,
-            "structure": 80,
-            "readability": 90,
-            "seo": 85
-        },
-        "audits": [
-            {
-                "title": "Title Optimization",
-                "label": "Title Optimization",
-                "status": "passed",
-                "score": 100,
-                "description": "Title is concise."
-            },
-            {
-                "title": "Heading Structure",
-                "label": "Heading Structure",
-                "status": "warning",
-                "score": 60,
-                "description": "H1 present but hierarchy skipped."
-            },
-            {
-                "title": "Schema Markup",
-                "label": "Schema Markup",
-                "status": "failed",
-                "score": 0,
-                "description": "No schema found."
-            }
-        ],
-        "suggestions": [
-            {
-                "type": "STRUCTURE",
-                "title": "Fix Headings",
-                "description": "Ensure H1 is followed by H2.",
-                "codeSnippet": "<h1>Main Title</h1>\\n<h2>Subheading</h2>\\n<p>Content...</p>"
-            },
-            {
-                "type": "CONTENT",
-                "title": "Add Examples",
-                "description": "Include real-world scenarios.",
-                "codeSnippet": "### Example Scenario\\nHere is a practical example of how this works..."
-            }
-        ],
-        "comparison": {
-            "topRanking": 92,
-            "industryAverage": 68
-        }
+      "title": "Schema Markup",
+      "label": "Schema Markup",
+      "status": "failed",
+      "score": 0,
+      "description": "No schema found."
     }
-    """, content.replace("\"", "'").substring(0, Math.min(content.length(), 20000)));
+  ],
+  "suggestions": [
+    {
+      "type": "STRUCTURE",
+      "title": "Add Schema",
+      "description": "Include Article schema.",
+      "codeSnippet": "<script type=\\"application/ld+json\\">{}</script>"
+    }
+  ],
+  "comparison": {
+    "topRanking": 92,
+    "industryAverage": 68
+  }
+}
+""", safeContent);
 
-            Map<String, Object> requestBody = new HashMap<>();
-            requestBody.put("model", modelName);
-            requestBody.put("messages", List.of(
+            // Request body
+            Map<String, Object> body = new HashMap<>();
+            body.put("model", modelName);
+            body.put("messages", List.of(
                     Map.of("role", "user", "content", prompt)
             ));
 
+            // Headers
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
-            headers.set("Authorization", "Bearer " + apiKey);
+            headers.setBearerAuth(apiKey);
             headers.set("HTTP-Referer", "http://localhost:3000");
+            headers.set("X-Title", "AEO Analyzer");
+            headers.set("X-Source", "aeo-analyzer-backend");
 
-            HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+            HttpEntity<Map<String, Object>> entity =
+                    new HttpEntity<>(body, headers);
 
-            ResponseEntity<String> response = restTemplate.postForEntity(apiUrl, entity, String.class);
+            ResponseEntity<String> response =
+                    restTemplate.postForEntity(API_URL, entity, String.class);
 
-            return extractTextFromOpenRouterResponse(response.getBody());
+            String aiText = extractText(response.getBody());
+
+            // Validate JSON strictly
+            objectMapper.readTree(aiText);
+
+            return aiText;
 
         } catch (Exception e) {
-            log.error("❌ OpenRouter Failed for model {}: {}", modelName, e.getMessage());
-            throw new RuntimeException("AI Service Unavailable");
+            log.error("❌ OpenRouter error: {}", e.getMessage(), e);
+            throw new RuntimeException("AI analysis failed");
         }
     }
 
-    private String extractTextFromOpenRouterResponse(String jsonResponse) {
+    private String extractText(String json) {
         try {
-            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-            com.fasterxml.jackson.databind.JsonNode root = mapper.readTree(jsonResponse);
-            return root.path("choices").get(0).path("message").path("content").asText();
+            JsonNode root = objectMapper.readTree(json);
+            return root.path("choices")
+                    .get(0)
+                    .path("message")
+                    .path("content")
+                    .asText();
         } catch (Exception e) {
-            return jsonResponse;
+            throw new RuntimeException("Invalid OpenRouter response");
         }
     }
 }

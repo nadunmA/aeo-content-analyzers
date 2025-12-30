@@ -10,7 +10,6 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
-import org.springframework.web.client.RestTemplate;
 
 @SpringBootApplication(exclude = {SecurityAutoConfiguration.class, ManagementWebSecurityAutoConfiguration.class})
 public class AnalyzerApplication {
@@ -20,19 +19,14 @@ public class AnalyzerApplication {
 	}
 
 	@Bean
-	public RestTemplate restTemplate() {
-		return new RestTemplate();
-	}
-
-	@Bean
 	@Primary
 	public ObjectMapper objectMapper() {
 		return new ObjectMapper()
-				.registerModule(new JavaTimeModule())  // ← මේ line එක add කරන්න
+				.registerModule(new JavaTimeModule())
 				.configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true)
 				.configure(JsonParser.Feature.ALLOW_TRAILING_COMMA, true)
 				.configure(JsonParser.Feature.ALLOW_SINGLE_QUOTES, true)
 				.configure(JsonParser.Feature.ALLOW_NUMERIC_LEADING_ZEROS, true)
-				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS); // optional: pretty date format
+				.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
 	}
 }

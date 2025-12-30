@@ -11,7 +11,7 @@ const hasValidCode = (code) => {
   return true;
 };
 
-// --- Comparison Section ---
+// Comparison Section
 const ComparisonSection = ({ yourScore, industryAverage, topRanking }) => {
   const scoreDiff = topRanking - yourScore;
 
@@ -78,20 +78,18 @@ ComparisonSection.propTypes = {
   topRanking: PropTypes.number,
 };
 
-// --- Main Results Component ---
+// Main Results Component
 const Results = ({ result, onBack }) => {
   const [copiedIndex, setCopiedIndex] = useState(null);
 
   if (!result) return null;
 
-  // 1. Safe Data Access & TOTAL SCORE FIX
   // Backend sends 'seo', 'structure', 'readability'
   const schemaScore = result?.score?.schema ?? result?.score?.seo ?? 0;
   const structureScore =
     result?.score?.structure ?? result?.score?.technical ?? 0;
   const readabilityScore = result?.score?.readability ?? 0;
 
-  // FIX: Check 'total' OR 'overall' from backend
   let totalScore = result?.score?.total ?? result?.score?.overall ?? 0;
 
   // Fallback calculation if total is 0
@@ -435,7 +433,6 @@ const Results = ({ result, onBack }) => {
 
             <div className="space-y-6">
               {(result.suggestions || []).map((sug, idx) => {
-                // DATA FIX: Check both 'code' and 'codeSnippet'
                 const code = sug.code || sug.codeSnippet;
                 const showCode = hasValidCode(code);
 
@@ -491,7 +488,6 @@ const Results = ({ result, onBack }) => {
                         </div>
                       ) : (
                         <div className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 text-xs text-gray-500 italic flex items-center gap-2">
-                          {/* ICON FIX: Use AlertCircle instead of Info */}
                           <Icons.AlertCircle className="w-4 h-4" /> No code
                           snippet required for this fix. Check the explanation
                           above.

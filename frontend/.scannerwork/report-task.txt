@@ -1,0 +1,6 @@
+projectKey=aeo-frontend
+serverUrl=http://localhost:9000
+serverVersion=25.12.0.117093
+dashboardUrl=http://localhost:9000/dashboard?id=aeo-frontend
+ceTaskId=3fb8f0b0-2ae9-4930-8cc6-4dff71eecdf2
+ceTaskUrl=http://localhost:9000/api/ce/task?id=3fb8f0b0-2ae9-4930-8cc6-4dff71eecdf2

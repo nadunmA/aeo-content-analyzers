@@ -23,7 +23,7 @@ public class WebScraperService {
     private static final Logger log = LoggerFactory.getLogger(WebScraperService.class);
     private static final int MAX_CONTENT_LENGTH = 80000;
 
-    // බොරු User Agents
+    // User Agents
     private static final String[] USER_AGENTS = {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -35,19 +35,19 @@ public class WebScraperService {
     public String scrapeUrl(String url) throws IOException {
         validateUrl(url);
 
-        // 1. මුලින්ම Playwright ට්‍රයි කරනවා (Best Quality)
+        // 1st Playwright
         try {
             return executePlaywright(url);
         } catch (Exception e) {
             log.warn("⚠️ Playwright failed. Switching to Jsoup fallback. Error: {}", e.getMessage());
 
-            // 2. Playwright බැරි වුනොත් Jsoup ට්‍රයි කරනවා (Backup)
+            // Playwright failed after jsoup
             return scrapeWithJsoup(url);
         }
     }
 
     private String executePlaywright(String url) {
-        // අලුත් Playwright Version එකට ගැළපෙන settings
+
         try (Playwright playwright = Playwright.create()) {
             BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions()
                     .setHeadless(true)
@@ -75,7 +75,7 @@ public class WebScraperService {
 
             page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
 
-            // පොඩ්ඩක් ඉන්නවා (Anti-bot මගහරින්න)
+            // Anti-bot checker
             try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
 
             // Cloudflare Check
@@ -115,10 +115,10 @@ public class WebScraperService {
                 .referrer("https://www.google.com")
                 .timeout(30000)
                 .followRedirects(true)
-                .ignoreHttpErrors(true) // 403 ආවත් නවතින්නේ නෑ
+                .ignoreHttpErrors(true)
                 .get();
 
-        // Unwanted elements අයින් කරනවා
+        // Remove unwanted elements
         doc.select("script, style, noscript, iframe, nav, header, footer, aside, .ad").remove();
 
         Element article = doc.selectFirst("article");

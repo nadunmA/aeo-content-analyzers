@@ -1,44 +1,35 @@
-const API_URL = "http://localhost:6060/api/v1/content/analyze";
+const API_URL = `${import.meta.env.VITE_API_URL}/api/v1/content/analyze`;
 
 export const analyzeContent = async (inputValue, type) => {
-
-
   try {
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-
-      body: JSON.stringify({
-        text: inputValue,
-        type: type
-      }),
-
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text: inputValue, type }),
     });
 
-    if(!response.ok){
+    if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || "Server Error: Could not connect to Backend");
+      throw new Error(errorData.message || "Backend error");
     }
 
     const jsonString = await response.text();
-
     const data = JSON.parse(jsonString);
 
     return {
-      id: Math.random().toString(36).substr(2, 9),
+      id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),
-      title: data.title || (inputValue.substring(0, 30) + "..."),
-      type: type,
+      title: data.title ?? inputValue.slice(0, 30) + "...",
+      type,
       content: inputValue,
-
-      ...data
+      score: data.score ?? {},
+      audits: data.audits ?? [],
+      suggestions: data.suggestions ?? [],
+      comparison: data.comparison ?? {},
     };
 
-  }catch (error) {
+  } catch (error) {
     console.error("API Service Error:", error);
     throw error;
   }
-
-}
+};
