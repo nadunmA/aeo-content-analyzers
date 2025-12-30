@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from "react";
-import { Icons } from "../constants";
 
 const Footer = ({ onNavigate }) => {
   const currentYear = new Date().getFullYear();

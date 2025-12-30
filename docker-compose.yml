@@ -1,61 +1,29 @@
-version: '3.8'
+version: "3.8"
 
 services:
-  # MongoDB Database
-  mongodb:
-    image: mongo:7-jammy
-    container_name: aeo-mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-admin}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-admin123}
-      MONGO_INITDB_DATABASE: aeo_analyzer
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-      - mongodb_config:/data/configdb
-    networks:
-      - aeo-network
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Backend Service
   backend:
     build:
-      context: ./backend
+      context: ./backend/analyzer
       dockerfile: Dockerfile
     container_name: aeo-backend
     restart: unless-stopped
     environment:
       SPRING_PROFILES_ACTIVE: prod
-      SPRING_DATA_MONGODB_HOST: mongodb
-      SPRING_DATA_MONGODB_PORT: 27017
-      SPRING_DATA_MONGODB_DATABASE: aeo_analyzer
-      SPRING_DATA_MONGODB_USERNAME: ${MONGO_USERNAME:-admin}
-      SPRING_DATA_MONGODB_PASSWORD: ${MONGO_PASSWORD:-admin123}
-      SPRING_DATA_MONGODB_AUTHENTICATION_DATABASE: admin
+      SPRING_DATA_MONGODB_URI: ${MONGODB_URI}
+
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+
       APP_USERNAME: ${APP_USERNAME:-admin}
       APP_PASSWORD: ${APP_PASSWORD:-admin123}
+
       SERVER_PORT: 6060
       JAVA_OPTS: "-Xms512m -Xmx1024m"
     ports:
       - "6060:6060"
-    depends_on:
-      mongodb:
-        condition: service_healthy
     networks:
       - aeo-network
-    # Optional: Mount application.properties if you want to use file-based config
-    # volumes:
-    #   - ./backend/src/main/resources/application.properties:/app/application.properties:ro
 
-  # Frontend Service
   frontend:
     build:
       context: ./frontend
@@ -75,41 +43,6 @@ services:
       retries: 3
       start_period: 10s
 
-# SonarQube Service
-  sonarqube:
-    image: sonarqube:community
-    container_name: aeo-sonarqube
-    restart: unless-stopped
-    environment:
-      SONAR_ES_BOOTSTRAP_CHECKS_DISABLE: true
-    ports:
-      - "9000:9000"
-    volumes:
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_logs:/opt/sonarqube/logs
-      - sonarqube_extensions:/opt/sonarqube/extensions
-    networks:
-      - aeo-network
-    healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:9000/api/system/status"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-
-
 networks:
   aeo-network:
     driver: bridge
-
-volumes:
-  mongodb_data:
-    driver: local
-  mongodb_config:
-    driver: local
-  sonarqube_data:
-    driver: local
-  sonarqube_logs:
-    driver: local
-  sonarqube_extensions:
-    driver: local

@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Icons } from "../constants";
 
 const Navbar = ({ currentPage, onNavigate }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);

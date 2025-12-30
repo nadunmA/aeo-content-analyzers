@@ -124,7 +124,7 @@ const History = ({ onView, onBack }) => {
     });
   };
 
-  // Filter & Sort Logic (Client Side for Current Page)
+  // Filter & Sort Logic
   const filteredHistory = reports
     .filter((item) => filterType === "all" || item.type === filterType)
     .sort((a, b) => {
