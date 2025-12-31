@@ -11,3 +11,8 @@ node_modules/
 target/
 dist/
 build/
+
+frontend/coverage/
+.scannerwork/
+.scannerwork/
+.scannerwork/
