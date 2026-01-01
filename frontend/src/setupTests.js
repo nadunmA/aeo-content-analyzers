@@ -1,22 +1,31 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// Mock matchMedia using globalThis
+// 1. Mock matchMedia
 Object.defineProperty(globalThis, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({
     matches: false,
     media: query,
     onchange: null,
-    addListener: vi.fn(), // Deprecated
-    removeListener: vi.fn(), // Deprecated
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
     addEventListener: vi.fn(),
     removeEventListener: vi.fn(),
     dispatchEvent: vi.fn(),
   })),
 });
 
-// Mock localStorage
+
+const IntersectionObserverMock = vi.fn(() => ({
+  disconnect: vi.fn(),
+  observe: vi.fn(),
+  takeRecords: vi.fn(),
+  unobserve: vi.fn(),
+}));
+vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
+
+
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -25,5 +34,5 @@ const localStorageMock = {
 };
 globalThis.localStorage = localStorageMock;
 
-// Mock fetch for API calls
+
 globalThis.fetch = vi.fn();
