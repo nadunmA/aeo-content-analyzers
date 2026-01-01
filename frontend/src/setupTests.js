@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, 'matchMedia', {
   })),
 });
 
-
+// 2. Mock IntersectionObserver (Class Mock)
 class IntersectionObserverMock {
   constructor() {
     this.observe = vi.fn();
@@ -36,5 +36,10 @@ const localStorageMock = {
 };
 globalThis.localStorage = localStorageMock;
 
-// 4. Mock fetch
-globalThis.fetch = vi.fn();
+// 4. Mock fetch (Updated to handle .json() calls) ✅
+globalThis.fetch = vi.fn(() =>
+  Promise.resolve({
+    ok: true,
+    json: () => Promise.resolve([]), // Default empty array response
+  })
+);
