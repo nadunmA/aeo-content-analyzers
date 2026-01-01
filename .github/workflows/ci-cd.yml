@@ -106,7 +106,7 @@ jobs:
 
         run: |
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-            -Dsonar.projectKey=nadunma_aeo-Backend \
+            -Dsonar.projectKey=nadunma_aeo-backend \
             -Dsonar.host.url=$SONAR_HOST_URL \
             -Dsonar.organization=nadunma \
             -Dsonar.login=$SONAR_TOKEN
