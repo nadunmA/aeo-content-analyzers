@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, 'matchMedia', {
   })),
 });
 
-// 2. Mock IntersectionObserver (Class Mock)
+// 2. Mock IntersectionObserver
 class IntersectionObserverMock {
   constructor() {
     this.observe = vi.fn();
