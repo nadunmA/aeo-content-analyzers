@@ -48,9 +48,10 @@ jobs:
         with:
           projectBaseDir: frontend
           args: >
-            -Dsonar.projectKey=aeo-frontend
+            -Dsonar.projectKey=nadunmA_aeo-content-analyzers
             -Dsonar.sources=src
             -Dsonar.tests=src
+            -Dsonar.organization=nadunma
             -Dsonar.test.inclusions=**/*.test.jsx,**/*.test.js
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.coverage.exclusions=**/*.test.jsx,**/*.test.js,**/*.config.js
@@ -112,8 +113,9 @@ jobs:
 
         run: |
           mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar \
-            -Dsonar.projectKey=aeo-backend \
+            -Dsonar.projectKey=nadunmA_aeo-content-analyzers \
             -Dsonar.host.url=$SONAR_HOST_URL \
+            -Dsonar.organization=nadunma \
             -Dsonar.login=$SONAR_TOKEN
 
       - name: SonarQube Quality Gate (Backend)
