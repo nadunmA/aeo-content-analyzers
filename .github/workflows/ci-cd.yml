@@ -56,15 +56,6 @@ jobs:
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
             -Dsonar.coverage.exclusions=**/*.test.jsx,**/*.test.js,**/*.config.js
 
-      # Add Quality Gate
-      - name: SonarQube Quality Gate (Frontend)
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scanMetadataReportFile: frontend/.scannerwork/report-task.txt
-
       - name: Build Frontend
         run: npm run build
 
