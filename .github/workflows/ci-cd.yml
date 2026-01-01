@@ -109,15 +109,8 @@ jobs:
             -Dsonar.projectKey=nadunma_aeo-backend \
             -Dsonar.host.url=$SONAR_HOST_URL \
             -Dsonar.organization=nadunma \
+            -Dsonar.qualitygate.wait=true \
             -Dsonar.login=$SONAR_TOKEN
-
-      - name: SonarQube Quality Gate (Backend)
-        uses: sonarsource/sonarqube-quality-gate-action@master
-        timeout-minutes: 5
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-        with:
-          scanMetadataReportFile: backend/analyzer/target/sonar/report-task.txt
 
       - name: Upload JAR Artifact
         uses: actions/upload-artifact@v4
