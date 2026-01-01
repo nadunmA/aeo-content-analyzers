@@ -17,15 +17,17 @@ Object.defineProperty(globalThis, 'matchMedia', {
 });
 
 
-const IntersectionObserverMock = vi.fn(() => ({
-  disconnect: vi.fn(),
-  observe: vi.fn(),
-  takeRecords: vi.fn(),
-  unobserve: vi.fn(),
-}));
+class IntersectionObserverMock {
+  constructor() {
+    this.observe = vi.fn();
+    this.disconnect = vi.fn();
+    this.unobserve = vi.fn();
+    this.takeRecords = vi.fn();
+  }
+}
 vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
 
-
+// 3. Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -34,5 +36,5 @@ const localStorageMock = {
 };
 globalThis.localStorage = localStorageMock;
 
-
+// 4. Mock fetch
 globalThis.fetch = vi.fn();
