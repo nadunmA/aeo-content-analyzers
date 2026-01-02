@@ -122,7 +122,7 @@ jobs:
   docker-build:
     needs: [frontend-ci, backend-ci]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/master'
+    if: github.ref == 'refs/heads/dev'
 
     steps:
       - name: Checkout Code
@@ -150,4 +150,4 @@ jobs:
         run: docker build -t aeo-backend:latest ./backend/analyzer
 
       - name: Validate Docker Compose Config
-        run: docker-compose config
+        run: docker compose config
