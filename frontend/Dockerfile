@@ -11,6 +11,9 @@ RUN npm ci --silent
 # Copy source code
 COPY . .
 
+
+
+
 # Build for production
 RUN npm run build
 

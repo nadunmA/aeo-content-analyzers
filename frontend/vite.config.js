@@ -24,6 +24,8 @@ export default defineConfig(({ mode }) => {
 
     define: {
       'import.meta.env.VITE_GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+
+
     },
 
     resolve: {
@@ -31,5 +33,13 @@ export default defineConfig(({ mode }) => {
         '@': path.resolve(__dirname, './src'),
       },
     },
-  };
+
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: './src/setupTests.js',
+      css: true,
+
+  },
+};
 });

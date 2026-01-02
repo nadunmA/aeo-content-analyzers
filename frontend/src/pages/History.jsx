@@ -363,6 +363,7 @@ const History = ({ onView, onBack }) => {
                   {/* Delete Button */}
                   <button
                     onClick={(e) => handleDelete(e, item.id)}
+                    aria-label="Delete Report"
                     className="absolute top-4 right-4 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors z-10 opacity-0 group-hover:opacity-100"
                     title="Delete Report"
                   >

@@ -1,4 +1,4 @@
-const API_URL = `${import.meta.env.VITE_API_URL}/api/v1/content/analyze`;
+const API_URL = "http://localhost:6060/api/v1/content/analyze";
 
 export const analyzeContent = async (inputValue, type) => {
   try {
