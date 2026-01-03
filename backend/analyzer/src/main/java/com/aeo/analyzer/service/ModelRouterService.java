@@ -34,7 +34,7 @@ public class ModelRouterService {
             log.error("❌ Gemini Failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
         }
 
-        // Second: Use Claude 3 Haiku (assuming still available; update to claude-3.5-haiku if deprecated)
+        // Second: Use Claude 3 Haiku
         try {
             log.info("🛡️ [2/4] Trying Backup 1: Claude 3 Haiku...");
             // Second: Use Claude 3.5 Sonnet
@@ -50,7 +50,7 @@ public class ModelRouterService {
             log.error("❌ Claude Failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
         }
 
-        // Third: Use GPT-4o-mini (assuming still available; update to openai/gpt-4o if needed)
+        // Third: Use GPT-4o-mini
        try {
             log.info("🛡️ [3/4] Trying Backup 2: GPT-4o-mini...");
             String result = openRouterService.analyzeContent(text, "deepseek/deepseek-chat");
@@ -65,7 +65,7 @@ public class ModelRouterService {
             log.error("❌ GPT-4o-mini Failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
         }
 
-        // Fourth: Use DeepSeek (assuming still available; update to latest if needed)
+        // Fourth: Use DeepSeek
        try {
             log.info("🛡️ [4/4] Trying Last Resort: DeepSeek V3...");
             String result = openRouterService.analyzeContent(text, "deepseek/deepseek-chat");
