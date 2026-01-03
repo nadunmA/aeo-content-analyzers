@@ -10,19 +10,27 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
-
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @Service
 public class GeminiService {
-
     private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
+
+
+    private static final String TYPE_STR = "type";
+    private static final String OBJ_STR = "object";
+    private static final String STR_STR = "string";
+    private static final String INT_STR = "integer";
+    private static final String PROP_STR = "properties";
+    private static final String REQ_STR = "required";
+    private static final String DESC_STR = "description";
+    private static final String TITLE_STR = "title";
 
     @Value("${gemini.api.url}")
     private String apiUrl;
-
     @Value("${gemini.api.key}")
     private String apiKey;
 
@@ -34,142 +42,86 @@ public class GeminiService {
         this.objectMapper = objectMapper;
     }
 
-    public String analyzeContent(String text) throws Exception {
+    public String analyzeContent(String text) throws IOException {
         String fullUrl = apiUrl + "?key=" + apiKey;
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-
         String limitedText = text.substring(0, Math.min(text.length(), 15000));
 
-        String finalPrompt = """
-            You are an expert in Answer Engine Optimization (AEO).
-            Analyze the provided content for:
-            - Schema Markup (structured data)
-            - Structure & Q&A (headings, lists, questions)
-            - Readability (clarity, engagement)
+        String finalPrompt = String.format("""
+            Analyze this content for AEO (Answer Engine Optimization).
+            Return scores, detailed audits, and ACTIONABLE suggestions.
+            For each suggestion, provide a 'description' and 'codeSnippet'.
 
-            Provide scores (0-100) and detailed audits/suggestions in strict JSON.
-
-            CONTENT TO ANALYZE:
-            ===================
+            CONTENT:
             %s
-            ===================
-            """.formatted(limitedText);
-
-        Map<String, Object> part = Map.of("text", finalPrompt);
-
-        // Gemini-compatible schema (no additionalProperties)
-        Map<String, Object> scoreSchema = Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "total", Map.of("type", "integer", "minimum", 0, "maximum", 100),
-                        "schema", Map.of("type", "integer", "minimum", 0, "maximum", 100),
-                        "structure", Map.of("type", "integer", "minimum", 0, "maximum", 100),
-                        "readability", Map.of("type", "integer", "minimum", 0, "maximum", 100)
-                ),
-                "required", List.of("total", "schema", "structure", "readability")
-        );
-
-        Map<String, Object> auditSchema = Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "title", Map.of("type", "string"),
-                        "status", Map.of("type", "string", "enum", List.of("pass", "warning", "fail")),
-                        "description", Map.of("type", "string")
-                ),
-                "required", List.of("title", "status", "description")
-        );
-
-        Map<String, Object> suggestionSchema = Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "type", Map.of("type", "string", "enum", List.of("schema", "qa", "summary", "content")),
-                        "title", Map.of("type", "string"),
-                        "explanation", Map.of("type", "string"),
-                        "code", Map.of("type", "string")
-                ),
-                "required", List.of("type", "title", "explanation")
-        );
-
-        Map<String, Object> comparisonSchema = Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "topRanking", Map.of("type", "integer", "minimum", 0, "maximum", 100),
-                        "industryAverage", Map.of("type", "integer", "minimum", 0, "maximum", 100)
-                ),
-                "required", List.of("topRanking", "industryAverage")
-        );
-
-        Map<String, Object> responseSchema = Map.of(
-                "type", "object",
-                "properties", Map.of(
-                        "score", scoreSchema,
-                        "comparison", comparisonSchema,
-                        "audits", Map.of("type", "array", "items", auditSchema),
-                        "suggestions", Map.of("type", "array", "items", suggestionSchema)
-                ),
-                "required", List.of("score", "comparison", "audits", "suggestions")
-        );
+            """, limitedText);
 
         Map<String, Object> requestBody = new HashMap<>();
-        requestBody.put("contents", List.of(Map.of("parts", List.of(part))));
-
+        requestBody.put("contents", List.of(Map.of("parts", List.of(Map.of("text", finalPrompt)))));
         requestBody.put("generationConfig", Map.of(
                 "responseMimeType", "application/json",
-                "responseSchema", responseSchema,
-                "temperature", 0.3,
-                "maxOutputTokens", 5000
+                "responseSchema", buildFullResponseSchema(),
+                "temperature", 0.2
         ));
 
-        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, headers);
+        HttpEntity<Map<String, Object>> entity = new HttpEntity<>(requestBody, new HttpHeaders());
+        return executeRequest(fullUrl, entity);
+    }
 
+    private Map<String, Object> buildFullResponseSchema() {
+        // Suggestions Schema
+        Map<String, Object> suggestionSchema = Map.of(
+                TYPE_STR, OBJ_STR,
+                PROP_STR, Map.of(
+                        TYPE_STR, Map.of(TYPE_STR, STR_STR, "enum", List.of("STRUCTURE", "CONTENT", "QA", "TECHNICAL")),
+                        TITLE_STR, Map.of(TYPE_STR, STR_STR),
+                        DESC_STR, Map.of(TYPE_STR, STR_STR),
+                        "codeSnippet", Map.of(TYPE_STR, STR_STR)
+                ),
+                REQ_STR, List.of(TYPE_STR, TITLE_STR, DESC_STR, "codeSnippet")
+        );
+
+        // Audit Schema
+        Map<String, Object> auditSchema = Map.of(
+                TYPE_STR, OBJ_STR,
+                PROP_STR, Map.of(
+                        TITLE_STR, Map.of(TYPE_STR, STR_STR),
+                        "status", Map.of(TYPE_STR, STR_STR, "enum", List.of("pass", "warning", "fail")),
+                        DESC_STR, Map.of(TYPE_STR, STR_STR)
+                ),
+                REQ_STR, List.of(TITLE_STR, "status", DESC_STR)
+        );
+
+        return Map.of(
+                TYPE_STR, OBJ_STR,
+                PROP_STR, Map.of(
+                        "score", Map.of(
+                                TYPE_STR, OBJ_STR,
+                                PROP_STR, Map.of(
+                                        "overall", Map.of(TYPE_STR, INT_STR, "minimum", 0, "maximum", 100),
+                                        "structure", Map.of(TYPE_STR, INT_STR, "minimum", 0, "maximum", 100),
+                                        "readability", Map.of(TYPE_STR, INT_STR, "minimum", 0, "maximum", 100),
+                                        "seo", Map.of(TYPE_STR, INT_STR, "minimum", 0, "maximum", 100)
+                                ),
+                                REQ_STR, List.of("overall", "structure", "readability", "seo")  // ✅ Make all required
+                        ),
+                        "audits", Map.of(TYPE_STR, "array", "items", auditSchema),
+                        "suggestions", Map.of(TYPE_STR, "array", "items", suggestionSchema)
+                ),
+                REQ_STR, List.of("score", "audits", "suggestions")
+        );
+    }
+
+    private String executeRequest(String url, HttpEntity<Map<String, Object>> entity) throws IOException {
         try {
-            log.info("Calling Gemini API (Input length: {})", limitedText.length());
-            ResponseEntity<String> response = restTemplate.postForEntity(fullUrl, entity, String.class);
-
-            if (response.getBody() == null || response.getBody().trim().isEmpty()) {
-                log.warn("Empty response from Gemini");
-                throw new RuntimeException("Empty response from Gemini");
-            }
-
+            log.info("🚀 Calling Gemini Direct API...");
+            ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
             JsonNode root = objectMapper.readTree(response.getBody());
-            String responseText = root.path("candidates")
-                    .path(0)
-                    .path("content")
-                    .path("parts")
-                    .path(0)
-                    .path("text")
-                    .asText("");
-
-            if (responseText.isBlank()) {
-                log.warn("No text content in Gemini response");
-                throw new RuntimeException("No content in Gemini response");
-            }
-
-            String cleaned = responseText.trim()
-                    .replaceAll("^```json\\s*", "")
-                    .replaceAll("^```\\s*", "")
-                    .replaceAll("\\s*```$", "")
-                    .trim();
-
-            if (!cleaned.startsWith("{") || !cleaned.endsWith("}")) {
-                log.warn("Invalid JSON from Gemini: {}", responseText);
-                throw new RuntimeException("Invalid JSON format from Gemini");
-            }
-
-            log.info("✅ Gemini structured output successful!");
-            return cleaned;
-
-        } catch (HttpClientErrorException.TooManyRequests e) {
-            log.warn("Gemini quota exceeded (429) - Triggering failover to OpenRouter models");
-            throw e; // Critical: Throw to enable failover
-        } catch (ResourceAccessException e) {
-            log.error("Gemini connection/timeout error: {}", e.getMessage());
+            String responseText = root.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText("");
+            return responseText.trim().replaceAll("^```json\\s*", "").replaceAll("\\s*```$", "").trim();
+        } catch (HttpClientErrorException.TooManyRequests | ResourceAccessException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Gemini API unexpected error: {}", e.getMessage(), e);
-            return null;
+            throw new IOException("Gemini failure: " + e.getMessage(), e);
         }
     }
 }

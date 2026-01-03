@@ -41,81 +41,87 @@ const Navbar = ({ currentPage, onNavigate }) => {
         isVisible ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"
       }`}
     >
-      <div
-        className={`bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-full border border-gray-200 dark:border-gray-800 px-4 sm:px-6 h-16 flex items-center justify-between transition-all duration-300 ${
-          isScrolled
-            ? "shadow-2xl shadow-gray-200/50 dark:shadow-gray-900/50 scale-[0.98]"
-            : "shadow-lg"
-        }`}
-      >
-        {/* Logo */}
+      <div className="flex items-center gap-4">
+        {/* Logo - Separate on Left */}
         <button
           onClick={() => {
             onNavigate("landing");
             setIsMobileMenuOpen(false);
           }}
-          className="flex items-center gap-2 group focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full px-2 -ml-2 transition-transform hover:scale-105 active:scale-95"
+          className="group focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full transition-transform hover:scale-105 active:scale-95 relative"
           aria-label="Go to home page"
         >
-          <div className="w-8 h-8 bg-gradient-to-br from-indigo-600 to-indigo-700 rounded-xl flex items-center justify-center text-white font-semibold shadow-lg shadow-indigo-500/30 group-hover:shadow-xl group-hover:shadow-indigo-500/40 transition-all">
-            A
+          {/* Rotating Gradient Border - Enhanced */}
+          <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 via-pink-500 to-indigo-600 rounded-full opacity-75 blur-lg animate-spin-slow"></div>
+
+          {/* Extra glow layer */}
+          <div className="absolute -inset-0.5 bg-indigo-500/50 rounded-full blur-md"></div>
+
+          <div className="relative px-7 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-full flex items-center justify-center font-bold shadow-2xl transition-all">
+            <span className="text-white text-sm font-extrabold">AEO</span>
           </div>
-          <span className="text-lg font-semibold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent hidden sm:block">
-            AEO Analyzer
-          </span>
         </button>
 
-        {/* Desktop Navigation - ONLY SHOWS ON md+ SCREENS */}
-        <div className="hidden md:flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-full p-1.5">
-          {navItems.map((item, index) => (
-            <button
-              key={item.id}
-              onClick={() => onNavigate(item.id)}
-              className={getNavButtonClass(item.id)}
-              aria-current={currentPage === item.id ? "page" : undefined}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Mobile Menu Button - ONLY SHOWS ON MOBILE */}
-        <button
-          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-          className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 active:scale-90"
-          aria-label="Toggle menu"
-          aria-expanded={isMobileMenuOpen}
+        {/* Navigation Bar - Separate on Right */}
+        <div
+          className={`flex-1 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-full border border-gray-200 dark:border-gray-800 px-4 sm:px-6 h-16 flex items-center justify-between transition-all duration-300 ${
+            isScrolled
+              ? "shadow-2xl shadow-gray-200/50 dark:shadow-gray-900/50 scale-[0.98]"
+              : "shadow-lg"
+          }`}
         >
-          <div className="relative w-6 h-6">
-            <span
-              className={`absolute top-1 left-0 w-6 h-0.5 bg-gray-900 dark:bg-white rounded-full transition-all duration-300 ${
-                isMobileMenuOpen ? "rotate-45 top-3" : ""
-              }`}
-            />
-            <span
-              className={`absolute top-3 left-0 w-6 h-0.5 bg-gray-900 dark:bg-white rounded-full transition-all duration-300 ${
-                isMobileMenuOpen ? "opacity-0" : ""
-              }`}
-            />
-            <span
-              className={`absolute top-5 left-0 w-6 h-0.5 bg-gray-900 dark:bg-white rounded-full transition-all duration-300 ${
-                isMobileMenuOpen ? "-rotate-45 top-3" : ""
-              }`}
-            />
+          {/* Desktop Navigation - ONLY SHOWS ON md+ SCREENS */}
+          <div className="hidden md:flex items-center gap-2 bg-gray-100/50 dark:bg-gray-800/50 rounded-full p-1.5 mx-auto">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => onNavigate(item.id)}
+                className={getNavButtonClass(item.id)}
+                aria-current={currentPage === item.id ? "page" : undefined}
+              >
+                {item.label}
+              </button>
+            ))}
           </div>
-        </button>
+
+          {/* Mobile Menu Button - ONLY SHOWS ON MOBILE */}
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="md:hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 active:scale-90 ml-auto"
+            aria-label="Toggle menu"
+            aria-expanded={isMobileMenuOpen}
+          >
+            <div className="relative w-6 h-6">
+              <span
+                className={`absolute top-1 left-0 w-6 h-0.5 bg-gray-900 dark:bg-white rounded-full transition-all duration-300 ${
+                  isMobileMenuOpen ? "rotate-45 top-3" : ""
+                }`}
+              />
+              <span
+                className={`absolute top-3 left-0 w-6 h-0.5 bg-gray-900 dark:bg-white rounded-full transition-all duration-300 ${
+                  isMobileMenuOpen ? "opacity-0" : ""
+                }`}
+              />
+              <span
+                className={`absolute top-5 left-0 w-6 h-0.5 bg-gray-900 dark:bg-white rounded-full transition-all duration-300 ${
+                  isMobileMenuOpen ? "-rotate-45 top-3" : ""
+                }`}
+              />
+            </div>
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu Dropdown - ONLY SHOWS ON MOBILE */}
       <div
-        className={`md:hidden mt-2 bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-300 origin-top ${
+        className={`md:hidden mt-2 ml-auto bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-300 origin-top ${
           isMobileMenuOpen
             ? "shadow-2xl opacity-100 scale-100 max-h-96"
             : "shadow-none opacity-0 scale-95 max-h-0 pointer-events-none"
         }`}
       >
         <div className="p-3 flex flex-col gap-2">
-          {navItems.map((item, index) => (
+          {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => {

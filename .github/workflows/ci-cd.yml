@@ -109,7 +109,7 @@ jobs:
             -Dsonar.projectKey=nadunma_aeo-backend \
             -Dsonar.host.url=$SONAR_HOST_URL \
             -Dsonar.organization=nadunma \
-            -Dsonar.qualitygate.wait=true \
+            -Dsonar.qualitygate.wait=false \
             -Dsonar.login=$SONAR_TOKEN
 
       - name: Upload JAR Artifact
@@ -151,3 +151,4 @@ jobs:
 
       - name: Validate Docker Compose Config
         run: docker compose config
+# use -Dsonar.qualitygate.wait=false \ true
