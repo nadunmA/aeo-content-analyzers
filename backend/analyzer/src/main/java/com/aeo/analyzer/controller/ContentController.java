@@ -5,20 +5,18 @@ import com.aeo.analyzer.model.AuditReport;
 import com.aeo.analyzer.repository.AuditReportRepository;
 import com.aeo.analyzer.service.ModelRouterService;
 import com.aeo.analyzer.service.WebScraperService;
-import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Jsoup;
-import org.jsoup.safety.Safelist;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,15 +29,19 @@ import java.util.Map;
         allowedHeaders = "*", allowCredentials = "true")
 public class ContentController {
 
+    private static final String STATUS_KEY = "status";
+    private static final String AUDITS_KEY = "audits";
+    private static final String SCORE_KEY = "score";
+    private static final String FAILED_VAL = "failed";
+
     private final ModelRouterService modelRouterService;
     private final AuditReportRepository repository;
-    private final ObjectMapper objectMapper;
     private final WebScraperService webScraperService;
 
-    public ContentController(AuditReportRepository repository, ObjectMapper objectMapper,
-                             WebScraperService webScraperService, ModelRouterService modelRouterService) {
+    public ContentController(AuditReportRepository repository,
+                             WebScraperService webScraperService,
+                             ModelRouterService modelRouterService) {
         this.repository = repository;
-        this.objectMapper = objectMapper;
         this.webScraperService = webScraperService;
         this.modelRouterService = modelRouterService;
     }
@@ -47,140 +49,227 @@ public class ContentController {
     @PostMapping("/analyze")
     public ResponseEntity<Object> analyze(@Valid @RequestBody AnalyzeRequest request,
                                           HttpServletRequest httpServletRequest) {
-        String clientIp = httpServletRequest.getRemoteAddr();
-
-        String requestType = request.getType() != null ? request.getType().toLowerCase() : "text";
-        String contentToProcess = request.getText();
-
-        if ("url".equals(requestType)) {
-            // Log raw input for debugging
-            log.info("🔍 Analysis requested for URL: {}", contentToProcess);
-        }
-
         try {
-            String contentToAnalyze = contentToProcess;
-            String extractedTitle = null;
+            String clientIp = httpServletRequest.getRemoteAddr();
+            String type = request.getType() != null ? request.getType().toLowerCase() : "text";
 
-            if ("url".equals(requestType)) {
-                try {
-                    contentToAnalyze = webScraperService.scrapeUrl(contentToProcess);
-                    extractedTitle = webScraperService.extractTitleFromUrl(contentToProcess);
-                } catch (Exception e) {
-                    log.error("Scraping failed: {}", e.getMessage());
-                    throw e;
-                }
-                // AI Limit (20k chars)
-                if (contentToAnalyze.length() > 20000) contentToAnalyze = contentToAnalyze.substring(0, 20000);
-            }
+            // 1. Content Extraction
+            String contentToAnalyze = extractContent(request, type);
+            String title = "url".equals(type) ? webScraperService.extractTitleFromUrl(request.getText()) : request.getText();
 
-            // Call AI
-            String aiJson = modelRouterService.analyzeWithFailover(contentToAnalyze);
+            // 2. AI Processing
+            String aiRaw = modelRouterService.analyzeWithFailover(contentToAnalyze);
+            Map<String, Object> result = parseAiResponse(aiRaw);
 
-            // JSON CLEANING
-            String cleanedJson = aiJson.trim()
-                    .replaceAll("^```json\\s*", "").replaceAll("^```\\s*", "").replaceAll("\\s*```$", "");
+            // 3. Logic & Self-healing
+            processAuditsAndScores(result);
 
-            int firstBrace = cleanedJson.indexOf("{");
-            int lastBrace = cleanedJson.lastIndexOf("}");
-            if (firstBrace != -1 && lastBrace != -1) {
-                cleanedJson = cleanedJson.substring(firstBrace, lastBrace + 1);
-            }
-            cleanedJson = cleanedJson.replaceAll(",\\s*}", "}").replaceAll(",\\s*]", "]");
 
-            log.info("📝 AI JSON RESPONSE:\n{}", cleanedJson);
+            log.info("💾 Final result before save - Score: {}", result.get(SCORE_KEY));
 
-            objectMapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_CONTROL_CHARS, true);
-            Map<String, Object> result = objectMapper.readValue(cleanedJson, new TypeReference<Map<String, Object>>() {});
 
-            // ==========================================
-            // 🛡️ SELF-HEALING LOGIC
-            // ==========================================
-            List<Map<String, Object>> audits = (List<Map<String, Object>>) result.get("audits");
-            if (audits != null) {
-                for (Map<String, Object> audit : audits) {
-                    if (!audit.containsKey("title")) {
-                        Object label = audit.get("label");
-                        Object name = audit.get("name");
-                        audit.put("title", label != null ? label : (name != null ? name : "Optimization Check"));
-                    }
-                    if (audit.containsKey("status")) {
-                        String status = audit.get("status").toString().toLowerCase();
-                        audit.put("status", status);
-                    } else {
-                        audit.put("status", "failed");
-                    }
-                }
-            }
+            AuditReport report = createReportObject(request, result, type, title, clientIp);
+            AuditReport saved = repository.save(report);
 
-            Map<String, Object> scoreMap = (Map<String, Object>) result.get("score");
-            if (scoreMap == null) {
-                scoreMap = new HashMap<>();
-                result.put("score", scoreMap);
-            }
-            Object overallObj = scoreMap.get("overall");
-            int overallScore = 0;
-            if (overallObj instanceof Number) overallScore = ((Number) overallObj).intValue();
 
-            if (overallScore == 0 && audits != null && !audits.isEmpty()) {
-                double passedCount = 0.0;
-                for (Map<String, Object> audit : audits) {
-                    String status = (String) audit.getOrDefault("status", "failed");
-                    if ("passed".equals(status)) passedCount += 1.0;
-                    else if ("warning".equals(status)) passedCount += 0.5;
-                }
-                overallScore = (int) ((passedCount / audits.size()) * 100);
-                scoreMap.put("overall", overallScore);
-                scoreMap.put("seo", overallScore);
-                scoreMap.put("readability", overallScore + 5 > 100 ? 100 : overallScore + 5);
-                scoreMap.put("structure", overallScore);
-                log.info("🔧 Auto-calculated Score: {}", overallScore);
-            }
+            log.info("✅ Saved report ID: {} with score: {}", saved.getId(), saved.getScore());
 
-            // ==========================================
-            // 💾 SAVE TO DB (WITH VALIDATION SAFETY)
-            // ==========================================
-            AuditReport report = new AuditReport();
-
-            // Truncate Title to 190 chars
-            String finalTitle;
-            if ("url".equals(requestType)) {
-                finalTitle = (extractedTitle != null && !extractedTitle.isEmpty()) ? extractedTitle : contentToProcess;
-            } else {
-                finalTitle = request.getText();
-            }
-            if (finalTitle.length() > 190) finalTitle = finalTitle.substring(0, 190) + "...";
-            report.setTitle(finalTitle);
-
-            // Truncate Content to 99,000 chars
-            String finalContent = request.getText();
-            if (finalContent != null && finalContent.length() > 99000) {
-                finalContent = finalContent.substring(0, 99000) + "... (truncated)";
-            }
-            report.setUrlOrText(finalContent);
-
-            report.setType(requestType); // Already lowercased above
-            report.setStatus("completed");
-            report.setIpAddress(clientIp);
-
-            // Add AI Results
-            if(result.containsKey("score")) report.setScore((Map<String, Object>) result.get("score"));
-            if(result.containsKey("audits")) report.setAudits(audits);
-            if(result.containsKey("suggestions")) report.setSuggestions((List<Map<String, Object>>) result.get("suggestions"));
-            if(result.containsKey("comparison")) {
-                report.setComparison((Map<String, Object>) result.get("comparison"));
-            } else {
-                report.setComparison(Map.of("topRanking", 92, "industryAverage", 68));
-            }
-
-            log.info("💾 Saving report to DB...");
-            return ResponseEntity.ok(repository.save(report));
+            return ResponseEntity.ok(saved);
 
         } catch (Exception e) {
-            // Log the REAL error if saving fails
-            log.error("❌ CRITICAL ERROR: Analysis/Save failed: {}", e.getMessage(), e);
+            log.error("❌ Analysis failed: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(Map.of("error", "Analysis failed", "message", e.getMessage()));
         }
+    }
+
+    private String extractContent(AnalyzeRequest request, String type) throws IOException {
+        String content = request.getText();
+        if ("url".equals(type)) {
+            content = webScraperService.scrapeUrl(content);
+            if (content.length() > 20000) return content.substring(0, 20000);
+        }
+        return content;
+    }
+
+    private Map<String, Object> parseAiResponse(String aiJson) throws IOException {
+        String cleaned = aiJson.trim()
+                .replaceAll("^```json\\s*", "")
+                .replaceAll("^```\\s*", "")
+                .replaceAll("\\s*```$", "");
+
+        int start = cleaned.indexOf('{');
+        int end = cleaned.lastIndexOf('}');
+        if (start != -1 && end != -1) {
+            cleaned = cleaned.substring(start, end + 1);
+        }
+
+        cleaned = cleaned.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "");
+
+        ObjectMapper mapper = new ObjectMapper();
+        Map<String, Object> result = mapper.readValue(cleaned, new TypeReference<Map<String, Object>>() {});
+
+
+        if (!result.containsKey(SCORE_KEY) || result.get(SCORE_KEY) == null) {
+            result.put(SCORE_KEY, new HashMap<String, Object>());
+            log.warn("⚠️ AI response missing 'score' field - initialized empty map");
+        }
+
+        if (!result.containsKey(AUDITS_KEY) || result.get(AUDITS_KEY) == null) {
+            result.put(AUDITS_KEY, new java.util.ArrayList<>());
+            log.warn("⚠️ AI response missing 'audits' field - initialized empty list");
+        }
+
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void processAuditsAndScores(Map<String, Object> result) {
+        Object auditsObj = result.get(AUDITS_KEY);
+        if (auditsObj instanceof List) {
+            List<Map<String, Object>> audits = (List<Map<String, Object>>) auditsObj;
+            for (Map<String, Object> audit : audits) {
+                normalizeAudit(audit);
+            }
+            calculateFinalScore(result, audits);
+        } else {
+
+            List<Map<String, Object>> emptyAudits = new java.util.ArrayList<>();
+            result.put(AUDITS_KEY, emptyAudits);
+            calculateFinalScore(result, emptyAudits);
+        }
+    }
+
+    private void normalizeAudit(Map<String, Object> audit) {
+        if (!audit.containsKey("title")) {
+            Object label = audit.get("label");
+            audit.put("title", label != null ? label : "Optimization Check");
+        }
+        String s = audit.getOrDefault(STATUS_KEY, FAILED_VAL).toString().toLowerCase();
+        audit.put(STATUS_KEY, s);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void calculateFinalScore(Map<String, Object> result, List<Map<String, Object>> audits) {
+
+        Map<String, Object> scoreMap = (Map<String, Object>) result.computeIfAbsent(SCORE_KEY, k -> new HashMap<>());
+
+
+        Object overallObj = scoreMap.get("overall");
+        Integer overallScore = extractIntegerValue(overallObj);
+
+
+        if (overallScore == null || overallScore == 0) {
+            double totalPoints = 0;
+            int totalAudits = audits.size();
+
+            for (Map<String, Object> audit : audits) {
+                String status = audit.getOrDefault(STATUS_KEY, FAILED_VAL).toString().toLowerCase();
+                if (status.contains("pass")) {
+                    totalPoints += 1.0;
+                } else if (status.contains("warning")) {
+                    totalPoints += 0.5;
+                }
+                // "fail" adds 0
+            }
+
+            int calculatedScore = totalAudits == 0 ? 0 : (int) Math.round((totalPoints / totalAudits) * 100);
+
+
+            scoreMap.put("overall", calculatedScore);
+
+
+            ensureSubScore(scoreMap, "structure", calculatedScore);
+            ensureSubScore(scoreMap, "readability", calculatedScore);
+            ensureSubScore(scoreMap, "seo", calculatedScore);
+
+
+            result.put(SCORE_KEY, scoreMap);
+
+            log.info("🎯 Score Self-healed: overall={}, audits={}/{}", calculatedScore, (int)totalPoints, totalAudits);
+        } else {
+
+            ensureSubScore(scoreMap, "structure", overallScore);
+            ensureSubScore(scoreMap, "readability", overallScore);
+            ensureSubScore(scoreMap, "seo", overallScore);
+            result.put(SCORE_KEY, scoreMap);
+            log.info("✅ Score already exists: overall={}", overallScore);
+        }
+    }
+
+    /**
+     * Helper method to extract integer from various types
+     */
+    private Integer extractIntegerValue(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (value instanceof Integer) {
+            return (Integer) value;
+        }
+
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+
+        if (value instanceof String str) {
+            try {
+                return Integer.parseInt(str.trim());
+            } catch (NumberFormatException e) {
+                log.warn("⚠️ Cannot parse string to integer: {}", str);
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Helper method to ensure subscore exists
+     */
+    private void ensureSubScore(Map<String, Object> scoreMap, String key, int defaultValue) {
+        Object existing = scoreMap.get(key);
+        Integer value = extractIntegerValue(existing);
+
+        if (value == null || value == 0) {
+            scoreMap.put(key, defaultValue);
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private AuditReport createReportObject(AnalyzeRequest req, Map<String, Object> res, String type, String title, String ip) {
+        AuditReport report = new AuditReport();
+
+        String finalTitle = title != null && title.length() > 190 ? title.substring(0, 190) + "..." : title;
+        report.setTitle(finalTitle);
+
+        String text = req.getText();
+        report.setUrlOrText(text != null && text.length() > 95000 ? text.substring(0, 95000) : text);
+
+        report.setType(type);
+        report.setIpAddress(ip);
+        report.setStatus("completed");
+
+        // Safely get score map
+        Object scoreObj = res.get(SCORE_KEY);
+        if (scoreObj instanceof Map) {
+            report.setScore((Map<String, Object>) scoreObj);
+        } else {
+            // Fallback: create minimal score map
+            Map<String, Object> fallbackScore = new HashMap<>();
+            fallbackScore.put("overall", 0);
+            fallbackScore.put("structure", 0);
+            fallbackScore.put("readability", 0);
+            fallbackScore.put("seo", 0);
+            report.setScore(fallbackScore);
+            log.warn("⚠️ Score object was not a Map, using fallback");
+        }
+
+        report.setAudits((List<Map<String, Object>>) res.get(AUDITS_KEY));
+        report.setSuggestions((List<Map<String, Object>>) res.get("suggestions"));
+
+        return report;
     }
 
     @GetMapping("/history")
@@ -191,6 +280,22 @@ public class ContentController {
     @GetMapping("/report/{id}")
     public ResponseEntity<AuditReport> getReport(@PathVariable String id) {
         return repository.findById(id).map(ResponseEntity::ok).orElse(ResponseEntity.notFound().build());
+    }
+
+
+    @GetMapping("/debug/report/{id}")
+    public ResponseEntity<Map<String, Object>> debugReport(@PathVariable String id) {
+        return repository.findById(id)
+                .map(report -> {
+                    Map<String, Object> debug = new HashMap<>();
+                    debug.put("id", report.getId());
+                    debug.put("title", report.getTitle());
+                    debug.put("score", report.getScore());
+                    debug.put("audits_count", report.getAudits() != null ? report.getAudits().size() : 0);
+                    debug.put("status", report.getStatus());
+                    return ResponseEntity.ok(debug);
+                })
+                .orElse(ResponseEntity.notFound().build());
     }
 
     @DeleteMapping("/report/{id}")

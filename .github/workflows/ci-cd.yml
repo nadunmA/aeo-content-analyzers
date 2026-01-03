@@ -122,7 +122,7 @@ jobs:
   docker-build:
     needs: [frontend-ci, backend-ci]
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/dev'
+    if: github.ref == 'refs/heads/master'
 
     steps:
       - name: Checkout Code

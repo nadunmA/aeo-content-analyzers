@@ -1,12 +1,10 @@
 package com.aeo.analyzer.service;
 
 import com.microsoft.playwright.*;
-import com.microsoft.playwright.options.LoadState;
 import com.microsoft.playwright.options.WaitUntilState;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -14,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URL;
+import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Random;
 
@@ -22,8 +21,9 @@ public class WebScraperService {
 
     private static final Logger log = LoggerFactory.getLogger(WebScraperService.class);
     private static final int MAX_CONTENT_LENGTH = 80000;
+    private static final String ARTICLE_TAG = "article";
 
-    // User Agents
+    // ✅ සියලුම User Agents නැවත ඇතුළත් කළා
     private static final String[] USER_AGENTS = {
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -34,118 +34,95 @@ public class WebScraperService {
 
     public String scrapeUrl(String url) throws IOException {
         validateUrl(url);
-
-        // 1st Playwright
         try {
             return executePlaywright(url);
-        } catch (Exception e) {
-            log.warn("⚠️ Playwright failed. Switching to Jsoup fallback. Error: {}", e.getMessage());
-
-            // Playwright failed after jsoup
+        } catch (PlaywrightException | IllegalStateException e) {
+            log.warn("⚠️ Playwright failed: {}. Switching to Jsoup fallback.", e.getMessage());
             return scrapeWithJsoup(url);
+        } catch (Exception e) {
+            throw new IOException("Failed to scrape URL: " + url, e);
         }
     }
 
     private String executePlaywright(String url) {
 
-        try (Playwright playwright = Playwright.create()) {
-            BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions()
-                    .setHeadless(true)
-                    .setArgs(List.of(
-                            "--disable-gpu",
-                            "--no-sandbox",
-                            "--disable-dev-shm-usage",
-                            "--disable-extensions",
-                            "--disable-blink-features=AutomationControlled"
-                    ));
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions()
+                     .setHeadless(true)
+                     .setArgs(List.of(
+                             "--disable-gpu",
+                             "--no-sandbox",
+                             "--disable-dev-shm-usage",
+                             "--disable-extensions",
+                             "--disable-blink-features=AutomationControlled"
+                     )))) {
 
-            Browser browser = playwright.chromium().launch(launchOptions);
-
-            Browser.NewContextOptions contextOptions = new Browser.NewContextOptions()
+            BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                     .setUserAgent(USER_AGENTS[random.nextInt(USER_AGENTS.length)])
-                    .setViewportSize(1920, 1080)
-                    .setJavaScriptEnabled(true)
-                    .setIgnoreHTTPSErrors(true);
+                    .setViewportSize(1920, 1080));
 
-            BrowserContext context = browser.newContext(contextOptions);
-            context.setDefaultTimeout(45000); // 45 seconds timeout
-
+            context.setDefaultTimeout(45000);
             Page page = context.newPage();
             log.info("🌍 Playwright Navigating to: {}", url);
 
             page.navigate(url, new Page.NavigateOptions().setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
 
-            // Anti-bot checker
-            try { Thread.sleep(2000); } catch (InterruptedException ignored) {}
-
-            // Cloudflare Check
-            String title = page.title();
-            if (title != null && (title.contains("Just a moment") || title.contains("Security Check"))) {
-                throw new RuntimeException("Blocked by Cloudflare");
+            // Anti-bot wait
+            try { Thread.sleep(2000); } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new IllegalStateException("Wait interrupted", e);
             }
 
-            String content;
-            try {
-                if (page.locator("article").count() > 0) {
-                    content = page.locator("article").innerText();
-                } else if (page.locator("main").count() > 0) {
-                    content = page.locator("main").innerText();
-                } else {
-                    content = page.locator("body").innerText();
-                }
-            } catch (Exception e) {
-                content = "";
-            }
+            checkCloudflare(page);
+            String content = extractPageContent(page);
 
-            context.close();
-            browser.close();
-
-            if (content.isBlank()) throw new RuntimeException("Empty content from Playwright");
+            if (content.isBlank()) throw new IllegalStateException("Empty content from Playwright");
             return cleanText(content);
         }
     }
 
-    // Jsoup Fallback Method
+    private void checkCloudflare(Page page) {
+        String title = page.title();
+        if (title != null && (title.contains("Just a moment") || title.contains("Security Check"))) {
+            throw new IllegalStateException("Blocked by Cloudflare protection");
+        }
+    }
+
+    private String extractPageContent(Page page) {
+        if (page.locator(ARTICLE_TAG).count() > 0) return page.locator(ARTICLE_TAG).innerText();
+        if (page.locator("main").count() > 0) return page.locator("main").innerText();
+        return page.locator("body").innerText();
+    }
+
     private String scrapeWithJsoup(String url) throws IOException {
         log.info("⚡ Attempting Jsoup scraping for: {}", url);
-        String userAgent = USER_AGENTS[random.nextInt(USER_AGENTS.length)];
-
         Document doc = Jsoup.connect(url)
-                .userAgent(userAgent)
-                .referrer("https://www.google.com")
+                .userAgent(USER_AGENTS[random.nextInt(USER_AGENTS.length)])
                 .timeout(30000)
-                .followRedirects(true)
-                .ignoreHttpErrors(true)
                 .get();
 
-        // Remove unwanted elements
-        doc.select("script, style, noscript, iframe, nav, header, footer, aside, .ad").remove();
-
-        Element article = doc.selectFirst("article");
-        String text = (article != null) ? article.text() : doc.body().text();
-
-        return cleanText(text);
+        doc.select("script, style, noscript, nav, header, footer, aside, .ad").remove();
+        Element article = doc.selectFirst(ARTICLE_TAG);
+        return cleanText((article != null) ? article.text() : doc.body().text());
     }
 
     private String cleanText(String text) {
         if (text == null || text.isBlank()) return "";
         String cleaned = text.replaceAll("\\s+", " ").trim();
-        if (cleaned.length() > MAX_CONTENT_LENGTH) {
-            return cleaned.substring(0, MAX_CONTENT_LENGTH) + "... [truncated]";
-        }
-        return cleaned;
+        return (cleaned.length() > MAX_CONTENT_LENGTH) ? cleaned.substring(0, MAX_CONTENT_LENGTH) + "... [truncated]" : cleaned;
     }
 
     private void validateUrl(String urlString) throws IOException {
         try {
             URL url = new URL(urlString);
-            String host = url.getHost();
-            InetAddress address = InetAddress.getByName(host);
+            InetAddress address = InetAddress.getByName(url.getHost());
             if (address.isLoopbackAddress() || address.isSiteLocalAddress()) {
                 throw new IOException("Private IP addresses not allowed");
             }
+        } catch (UnknownHostException e) {
+            throw new IOException("Invalid URL Host: " + urlString, e);
         } catch (Exception e) {
-            throw new IOException("Invalid URL");
+            throw new IOException("Invalid URL structure: " + urlString, e);
         }
     }
 
@@ -157,7 +134,8 @@ public class WebScraperService {
                     .get()
                     .title();
         } catch (Exception e) {
-            return "Analyzed Content";
+            log.warn("Could not extract title for URL: {}. Defaulting title.", url);
+            return "Analyzed Website Content";
         }
     }
 }

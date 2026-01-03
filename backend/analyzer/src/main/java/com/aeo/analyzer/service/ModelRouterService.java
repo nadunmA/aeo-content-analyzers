@@ -51,7 +51,7 @@ public class ModelRouterService {
         }
 
         // Third: Use GPT-4o-mini (assuming still available; update to openai/gpt-4o if needed)
-        try {
+       try {
             log.info("🛡️ [3/4] Trying Backup 2: GPT-4o-mini...");
             String result = openRouterService.analyzeContent(text, "deepseek/deepseek-chat");
 
@@ -66,7 +66,7 @@ public class ModelRouterService {
         }
 
         // Fourth: Use DeepSeek (assuming still available; update to latest if needed)
-        try {
+       try {
             log.info("🛡️ [4/4] Trying Last Resort: DeepSeek V3...");
             String result = openRouterService.analyzeContent(text, "deepseek/deepseek-chat");
 
@@ -79,7 +79,6 @@ public class ModelRouterService {
         } catch (Exception e) {
             log.error("❌ DeepSeek Failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
         }
-
         // All failed
         log.error("❌ CRITICAL: All 4 AI Models Failed!");
         return getErrorJson();
