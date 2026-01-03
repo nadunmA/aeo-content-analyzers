@@ -151,3 +151,4 @@ jobs:
 
       - name: Validate Docker Compose Config
         run: docker compose config
+# use -Dsonar.qualitygate.wait=false \ true
