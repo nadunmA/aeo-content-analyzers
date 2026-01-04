@@ -173,7 +173,7 @@ public class ContentController {
         String cleaned = aiJson.trim()
                 .replaceAll("^```json\\s*", "")
                 .replaceAll("^```\\s*", "")
-                .replaceAll("\\s*```$", "");
+                .replaceAll("\\s*```\\s*$", "");
 
         int start = cleaned.indexOf('{');
         int end = cleaned.lastIndexOf('}');

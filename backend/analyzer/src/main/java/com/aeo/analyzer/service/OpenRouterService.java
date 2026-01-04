@@ -106,7 +106,7 @@ public class OpenRouterService {
         return text.trim()
                 .replaceAll("^```json\\s*", "")
                 .replaceAll("^```\\s*", "")
-                .replaceAll("\\s*```$", "")
+                .replaceAll("\\s*```\\s*$", "")
                 .trim();
     }
 
