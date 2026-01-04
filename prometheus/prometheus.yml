@@ -1,0 +1,61 @@
+# Prometheus Configuration for AEO Content Analyzer
+global:
+  scrape_interval: 15s      # Scrape targets every 15 seconds
+  evaluation_interval: 15s  # Evaluate rules every 15 seconds
+  scrape_timeout: 10s
+
+  external_labels:
+    cluster: 'aeo-analyzer'
+    environment: 'demo'
+
+# Alerting configuration (optional)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+# Rules files (for alerts)
+rule_files:
+  # - "alerts/*.yml"
+
+# Scrape configurations
+scrape_configs:
+  # ═══════════════════════════════════════════════════════════════
+  # Prometheus itself
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          service: 'prometheus'
+
+  # ═══════════════════════════════════════════════════════════════
+  # Spring Boot Backend - Application Metrics
+  # ═══════════════════════════════════════════════════════════════
+  - job_name: 'spring-boot-backend'
+    metrics_path: '/actuator/prometheus'
+    scrape_interval: 10s
+    static_configs:
+      - targets: ['backend:6060']
+        labels:
+          service: 'aeo-backend'
+          application: 'content-analyzer'
+          tier: 'backend'
+
+  # ═══════════════════════════════════════════════════════════════
+  # Node Exporter - System Metrics (if installed)
+  # ═══════════════════════════════════════════════════════════════
+  # - job_name: 'node-exporter'
+  #   static_configs:
+  #     - targets: ['node-exporter:9100']
+  #       labels:
+  #         service: 'node-exporter'
+
+  # ═══════════════════════════════════════════════════════════════
+  # Docker containers (if cAdvisor is installed)
+  # ═══════════════════════════════════════════════════════════════
+  # - job_name: 'cadvisor'
+  #   static_configs:
+  #     - targets: ['cadvisor:8080']
+  #       labels:
+  #         service: 'cadvisor'

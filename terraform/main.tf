@@ -1,0 +1,29 @@
+# Main Terraform Configuration for AEO Content Analyzer
+
+locals {
+  common_tags = {
+    Project     = var.project_name
+    Environment = var.environment
+    ManagedBy   = "Terraform"
+    Owner       = "AEO-Developer"
+    Purpose     = "Content-Analyzer"
+  }
+
+  name_prefix = "${var.project_name}-${var.environment}"
+}
+
+# Data source for latest Ubuntu AMI (optional, can override with variable)
+data "aws_ami" "ubuntu" {
+  most_recent = true
+  owners      = ["099720109477"] # Canonical
+
+  filter {
+    name   = "name"
+    values = ["ubuntu/images/hvm-ssd/ubuntu-jammy-24.04-amd64-server-*"]
+  }
+
+  filter {
+    name   = "virtualization-type"
+    values = ["hvm"]
+  }
+}

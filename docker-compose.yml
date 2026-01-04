@@ -1,6 +1,9 @@
 version: "3.8"
 
 services:
+  # ═══════════════════════════════════════════════════════════════
+  # Backend - Spring Boot Application
+  # ═══════════════════════════════════════════════════════════════
   backend:
     build:
       context: ./backend/analyzer
@@ -10,20 +13,33 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: prod
       SPRING_DATA_MONGODB_URI: ${MONGODB_URI}
-
       GEMINI_API_KEY: ${GEMINI_API_KEY}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-
       APP_USERNAME: ${APP_USERNAME:-admin}
       APP_PASSWORD: ${APP_PASSWORD:-admin123}
-
       SERVER_PORT: 6060
-      JAVA_OPTS: "-Xms512m -Xmx1024m"
+      JAVA_OPTS: "-Xms512m -Xmx2048m"  # Increased for 8GB RAM
+      # Prometheus metrics endpoint
+      MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
+      MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: true
     ports:
       - "6060:6060"
     networks:
       - aeo-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:6060/actuator/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 60s
+    labels:
+      - "prometheus.scrape=true"
+      - "prometheus.port=6060"
+      - "prometheus.path=/actuator/prometheus"
 
+  # ═══════════════════════════════════════════════════════════════
+  # Frontend - React/Vite with Nginx
+  # ═══════════════════════════════════════════════════════════════
   frontend:
     build:
       context: ./frontend
@@ -43,6 +59,65 @@ services:
       retries: 3
       start_period: 10s
 
+  # ═══════════════════════════════════════════════════════════════
+  # Prometheus - Metrics Collection
+  # ═══════════════════════════════════════════════════════════════
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: aeo-prometheus
+    restart: unless-stopped
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=7d'  # 7 days retention
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/data:/prometheus
+    networks:
+      - aeo-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ═══════════════════════════════════════════════════════════════
+  # Grafana - Visualization Dashboard
+  # ═══════════════════════════════════════════════════════════════
+  grafana:
+    image: grafana/grafana:latest
+    container_name: aeo-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=${APP_PASSWORD:-admin123}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=http://localhost:3000
+      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana/data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - aeo-network
+    depends_on:
+      - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
 networks:
   aeo-network:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
