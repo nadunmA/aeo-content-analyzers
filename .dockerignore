@@ -16,3 +16,30 @@ frontend/coverage/
 .scannerwork/
 .scannerwork/
 .scannerwork/
+
+
+
+# Terraform (infra files not needed inside image)
+terraform
+**/.terraform
+*.tfstate
+*.tfstate.*
+*.tfvars
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+crash.log
+
+# AWS / Secrets
+*.pem
+.env
+
+# Git
+.git
+.gitignore
+
+# OS / IDE
+.DS_Store
+.idea
+.vscode

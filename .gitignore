@@ -49,3 +49,28 @@ echo "!.env.example" >> .gitignore
 frontend/coverage/
 .scannerwork/
 .scannerwork/
+
+
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+
+# Terraform variables (secrets)
+*.tfvars
+
+# AWS
+*.pem
+.env
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+node_modules/
