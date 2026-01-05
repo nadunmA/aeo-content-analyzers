@@ -67,7 +67,7 @@ public class ContentController {
     private final WebScraperService webScraperService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Main endpoint to analyze content from URL or text
+
 
     @PostMapping("/analyze")
     public ResponseEntity<Object> analyze(
@@ -172,15 +172,15 @@ public class ContentController {
     private String cleanJsonResponse(String aiJson) {
         if (aiJson == null) return "{}";
 
-        // 1. මුලින්ම trim කරගන්න
+
         String cleaned = aiJson.trim();
 
-        // 2. Regex වෙනුවට සරල replace භාවිතා කරන්න (ReDoS ආරක්ෂාව සඳහා)
+
         cleaned = cleaned.replace("```json", "")
                 .replace("```", "")
                 .trim();
 
-        // 3. JSON object එක පවතින සීමාව සොයාගන්න
+
         int start = cleaned.indexOf('{');
         int end = cleaned.lastIndexOf('}');
 
@@ -188,7 +188,7 @@ public class ContentController {
             cleaned = cleaned.substring(start, end + 1);
         }
 
-        // 4. Control characters ඉවත් කිරීම (මෙය අවශ්‍ය නම් පමණක් තබන්න)
+
         return cleaned.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "");
     }
 

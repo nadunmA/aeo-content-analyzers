@@ -1,5 +1,4 @@
 # Main Terraform Configuration for AEO Content Analyzer
-
 locals {
   common_tags = {
     Project     = var.project_name
@@ -12,7 +11,7 @@ locals {
   name_prefix = "${var.project_name}-${var.environment}"
 }
 
-# Data source for latest Ubuntu AMI (optional, can override with variable)
+# Data source for latest Ubuntu AMI
 data "aws_ami" "ubuntu" {
   most_recent = true
   owners      = ["099720109477"] # Canonical

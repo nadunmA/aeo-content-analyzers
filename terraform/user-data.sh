@@ -25,7 +25,7 @@ apt-get install -y \
     git \
     htop
 
-# Configure Swap (4GB for t3.small)
+# Configure Swap
 echo "Configuring 4GB swap space..."
 fallocate -l 4G /swapfile
 chmod 600 /swapfile
@@ -73,8 +73,8 @@ cd /opt/aeo-analyzer
 echo "Creating monitoring volumes..."
 mkdir -p /opt/aeo-analyzer/prometheus/data
 mkdir -p /opt/aeo-analyzer/grafana/data
-chown -R 65534:65534 /opt/aeo-analyzer/prometheus/data  # nobody user
-chown -R 472:472 /opt/aeo-analyzer/grafana/data         # grafana user
+chown -R 65534:65534 /opt/aeo-analyzer/prometheus/data
+chown -R 472:472 /opt/aeo-analyzer/grafana/data
 
 # Create .env file
 echo "Creating environment configuration..."

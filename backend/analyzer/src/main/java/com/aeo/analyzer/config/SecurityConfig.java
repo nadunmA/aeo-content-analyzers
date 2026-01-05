@@ -37,7 +37,7 @@ public class SecurityConfig {
 
                 // Authorization Rules
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/v1/content/**").permitAll() // ✅ Added /v1/
+                        .requestMatchers("/api/v1/content/**").permitAll()
                         .requestMatchers("/actuator/**").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -54,7 +54,7 @@ public class SecurityConfig {
 
                 );
 
-        log.info("✅ Security configuration completed");
+        log.info("Security configuration completed");
         return http.build();
     }
 

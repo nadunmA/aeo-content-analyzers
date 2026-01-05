@@ -61,7 +61,7 @@ output "cloudwatch_dashboard_url" {
 
 output "ssh_command" {
   description = "SSH command to connect to instance"
-  value       = "ssh -i ${var.key_name}.pem ubuntu@${aws_eip.app.public_ip}"
+  value       = "Use AWS Console or: aws ec2-instance-connect ssh --instance-id ${aws_instance.app.id} --region ${var.aws_region}"
 }
 
 output "deployment_instructions" {

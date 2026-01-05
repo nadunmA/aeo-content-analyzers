@@ -4,14 +4,23 @@ resource "aws_security_group" "ec2" {
   description = "Security group for AEO EC2 instance"
   vpc_id      = aws_vpc.main.id
 
-  # SSH access (restricted to your IP)
+  # SSH access (via Instance Connect Endpoint only - more secure)
   ingress {
-    description = "SSH from allowed IPs"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = var.allowed_ssh_ips
+    description     = "SSH from Instance Connect Endpoint"
+    from_port       = 22
+    to_port         = 22
+    protocol        = "tcp"
+    security_groups = [aws_security_group.instance_connect.id]
   }
+
+  # Optional: Direct SSH (comment out if using Instance Connect only)
+  # ingress {
+  #   description = "Direct SSH from allowed IPs (less secure)"
+  #   from_port   = 22
+  #   to_port     = 22
+  #   protocol    = "tcp"
+  #   cidr_blocks = var.allowed_ssh_ips
+  # }
 
   # Frontend port (Nginx)
   ingress {
@@ -58,7 +67,7 @@ resource "aws_security_group" "ec2" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Grafana (monitoring dashboard)
+  # Grafana
   ingress {
     description = "Grafana"
     from_port   = 3000
@@ -81,7 +90,7 @@ resource "aws_security_group" "ec2" {
   }
 }
 
-# VPC Endpoint for S3 (Free, improves performance)
+# VPC Endpoint for S3
 resource "aws_vpc_endpoint" "s3" {
   vpc_id       = aws_vpc.main.id
   service_name = "com.amazonaws.${var.aws_region}.s3"

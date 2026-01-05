@@ -52,7 +52,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_data" {
     }
 
     expiration {
-      days = 365 # Delete after 1 year
+      days = 365
     }
   }
 

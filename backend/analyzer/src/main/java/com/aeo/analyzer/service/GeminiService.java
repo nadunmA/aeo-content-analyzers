@@ -102,7 +102,7 @@ public class GeminiService {
                                         "readability", Map.of(TYPE_STR, INT_STR, "minimum", 0, "maximum", 100),
                                         "seo", Map.of(TYPE_STR, INT_STR, "minimum", 0, "maximum", 100)
                                 ),
-                                REQ_STR, List.of("overall", "structure", "readability", "seo")  // ✅ Make all required
+                                REQ_STR, List.of("overall", "structure", "readability", "seo")
                         ),
                         "audits", Map.of(TYPE_STR, "array", "items", auditSchema),
                         "suggestions", Map.of(TYPE_STR, "array", "items", suggestionSchema)
