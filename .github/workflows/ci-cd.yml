@@ -40,8 +40,6 @@ jobs:
         with:
           args: --severity-threshold=high
 
-      # SonarQube Step Removed Here
-
       - name: Build Frontend
         run: npm run build
 
@@ -87,7 +85,7 @@ jobs:
           APP_USERNAME: ${{ secrets.APP_USERNAME }}
           APP_PASSWORD: ${{ secrets.APP_PASSWORD }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-        # වෙනස්කම: Sonar plugin සහ arguments ඉවත් කර සාමාන්‍ය Maven build එකක් පමණක් තබන ලදී.
+
         run: mvn -B clean package
 
       - name: Upload JAR Artifact

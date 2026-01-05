@@ -74,3 +74,13 @@ override.tf.json
 .idea/
 .vscode/
 node_modules/
+
+# Grafana
+grafana/data/
+grafana/plugins/
+
+# Prometheus
+prometheus/data/
+
+# Docker volumes
+**/data/
