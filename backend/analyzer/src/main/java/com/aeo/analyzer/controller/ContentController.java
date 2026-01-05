@@ -67,7 +67,7 @@ public class ContentController {
     private final WebScraperService webScraperService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Main endpoint to analyze content from URL or text
+
 
     @PostMapping("/analyze")
     public ResponseEntity<Object> analyze(
@@ -170,10 +170,16 @@ public class ContentController {
     }
 
     private String cleanJsonResponse(String aiJson) {
-        String cleaned = aiJson.trim()
-                .replaceAll("^```json\\s*", "")
-                .replaceAll("^```\\s*", "")
-                .replaceAll("\\s*```$", "");
+        if (aiJson == null) return "{}";
+
+
+        String cleaned = aiJson.trim();
+
+
+        cleaned = cleaned.replace("```json", "")
+                .replace("```", "")
+                .trim();
+
 
         int start = cleaned.indexOf('{');
         int end = cleaned.lastIndexOf('}');
@@ -181,6 +187,7 @@ public class ContentController {
         if (start != -1 && end != -1) {
             cleaned = cleaned.substring(start, end + 1);
         }
+
 
         return cleaned.replaceAll("[\\p{Cntrl}&&[^\r\n\t]]", "");
     }

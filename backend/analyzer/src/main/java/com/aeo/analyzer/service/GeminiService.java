@@ -102,7 +102,7 @@ public class GeminiService {
                                         "readability", Map.of(TYPE_STR, INT_STR, "minimum", 0, "maximum", 100),
                                         "seo", Map.of(TYPE_STR, INT_STR, "minimum", 0, "maximum", 100)
                                 ),
-                                REQ_STR, List.of("overall", "structure", "readability", "seo")  // ✅ Make all required
+                                REQ_STR, List.of("overall", "structure", "readability", "seo")
                         ),
                         "audits", Map.of(TYPE_STR, "array", "items", auditSchema),
                         "suggestions", Map.of(TYPE_STR, "array", "items", suggestionSchema)
@@ -117,7 +117,10 @@ public class GeminiService {
             ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
             JsonNode root = objectMapper.readTree(response.getBody());
             String responseText = root.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText("");
-            return responseText.trim().replaceAll("^```json\\s*", "").replaceAll("\\s*```$", "").trim();
+            return responseText.trim()
+                    .replace("```json", "")
+                    .replace("```", "")
+                    .trim();
         } catch (HttpClientErrorException.TooManyRequests | ResourceAccessException e) {
             throw e;
         } catch (Exception e) {

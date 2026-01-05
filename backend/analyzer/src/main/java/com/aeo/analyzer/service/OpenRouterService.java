@@ -103,11 +103,24 @@ public class OpenRouterService {
 
     private String cleanMarkdown(String text) {
         if (text == null || text.trim().isEmpty()) return "{}";
-        return text.trim()
-                .replaceAll("^```json\\s*", "")
-                .replaceAll("^```\\s*", "")
-                .replaceAll("\\s*```$", "")
+
+
+        String cleaned = text.trim();
+
+
+        cleaned = cleaned.replace("```json", "")
+                .replace("```", "")
                 .trim();
+
+
+        int start = cleaned.indexOf('{');
+        int end = cleaned.lastIndexOf('}');
+
+        if (start != -1 && end != -1 && start < end) {
+            return cleaned.substring(start, end + 1);
+        }
+
+        return cleaned;
     }
 
     private String extractText(String jsonBody) {
