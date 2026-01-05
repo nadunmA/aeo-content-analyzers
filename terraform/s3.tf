@@ -46,6 +46,8 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_data" {
     id     = "archive-old-data"
     status = "Enabled"
 
+    filter {}   # 👈 REQUIRED
+
     transition {
       days          = var.s3_lifecycle_days
       storage_class = "GLACIER_IR"
@@ -60,11 +62,14 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_data" {
     id     = "delete-incomplete-uploads"
     status = "Enabled"
 
+    filter {}   # 👈 REQUIRED
+
     abort_incomplete_multipart_upload {
       days_after_initiation = 7
     }
   }
 }
+
 
 # Data source for current AWS account
 data "aws_caller_identity" "current" {}
