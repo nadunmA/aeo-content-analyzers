@@ -13,29 +13,16 @@ RUN mvn clean package -DskipTests
 # Install Playwright browsers in a known location
 ENV PLAYWRIGHT_BROWSERS_PATH=/playwright-browsers
 
-# Fix for Ubuntu 404 Repository issues in Build Stage
+# ස්ථාවර Ubuntu Repositories පාවිච්චි කිරීම (Fix for 404 errors)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates && \
-    sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
-    apt-get update -y --fix-missing && \
+    sed -i 's|http://.*archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' /etc/apt/sources.list && \
+    apt-get update -y && \
     apt-get install -y --no-install-recommends \
-    libgbm1 \
-    libnss3 \
-    libnspr4 \
-    libasound2t64 \
-    libatk1.0-0t64 \
-    libatk-bridge2.0-0t64 \
-    libcups2t64 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libxfixes3 \
-    libxshmfence1 \
-    fonts-liberation \
+    libgbm1 libnss3 libnspr4 libasound2 libatk1.0-0 libatk-bridge2.0-0 \
+    libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 \
+    libpango-1.0-0 libcairo2 libxfixes3 libxshmfence1 fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Chromium using Playwright CLI
@@ -44,37 +31,21 @@ RUN mvn exec:java -e \
     -Dexec.args="install --with-deps chromium"
 
 # Production stage
-FROM eclipse-temurin:17-jre
+# Ubuntu Jammy පදනම් කරගත් ස්ථාවර image එකක් පාවිච්චි කිරීම
+FROM eclipse-temurin:17-jre-jammy
 WORKDIR /app
 
-# Fix for Ubuntu 404 Repository issues in Production Stage
+# Production Stage එකේදී අවශ්‍ය libraries ස්ථාපනය
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl && \
-    sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
-    apt-get update -y --fix-missing && \
+    sed -i 's|http://.*archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
+    sed -i 's|http://security.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' /etc/apt/sources.list && \
+    apt-get update -y && \
     apt-get install -y --no-install-recommends \
-    libgbm1 \
-    libnss3 \
-    libnspr4 \
-    libasound2t64 \
-    libatk1.0-0t64 \
-    libatk-bridge2.0-0t64 \
-    libcups2t64 \
-    libdrm2 \
-    libxkbcommon0 \
-    libxcomposite1 \
-    libxdamage1 \
-    libxrandr2 \
-    libpango-1.0-0 \
-    libcairo2 \
-    libxfixes3 \
-    libxshmfence1 \
-    libglu1-mesa \
-    fonts-liberation \
-    fonts-noto-color-emoji \
-    libx11-6 \
-    libxext6 \
-    libxrender1 \
+    libgbm1 libnss3 libnspr4 libasound2 libatk1.0-0 libatk-bridge2.0-0 \
+    libcups2 libdrm2 libxkbcommon0 libxcomposite1 libxdamage1 libxrandr2 \
+    libpango-1.0-0 libcairo2 libxfixes3 libxshmfence1 libglu1-mesa \
+    fonts-liberation fonts-noto-color-emoji libx11-6 libxext6 libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create spring user and group
@@ -84,7 +55,7 @@ RUN addgroup --system spring && \
 # Copy JAR from build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Copy Playwright browsers from build stage to correct location
+# Copy Playwright browsers
 COPY --from=build --chown=spring:spring /playwright-browsers /home/spring/.cache/ms-playwright
 
 # Set proper ownership
