@@ -12,7 +12,13 @@ RUN mvn clean package -DskipTests
 
 # Install Playwright browsers in a known location
 ENV PLAYWRIGHT_BROWSERS_PATH=/playwright-browsers
-RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
+
+# Fix for Ubuntu 404 Repository issues in Build Stage
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates && \
+    sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
+    apt-get update -y --fix-missing && \
+    apt-get install -y --no-install-recommends \
     libgbm1 \
     libnss3 \
     libnspr4 \
@@ -28,9 +34,8 @@ RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
     libpango-1.0-0 \
     libcairo2 \
     libxfixes3 \
-    libgbm1 \
-    fonts-liberation \
     libxshmfence1 \
+    fonts-liberation \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Chromium using Playwright CLI
@@ -42,8 +47,12 @@ RUN mvn exec:java -e \
 FROM eclipse-temurin:17-jre
 WORKDIR /app
 
-# Install ALL required Chromium dependencies
-RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
+# Fix for Ubuntu 404 Repository issues in Production Stage
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl && \
+    sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
+    apt-get update -y --fix-missing && \
+    apt-get install -y --no-install-recommends \
     libgbm1 \
     libnss3 \
     libnspr4 \
@@ -66,8 +75,6 @@ RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
     libx11-6 \
     libxext6 \
     libxrender1 \
-    ca-certificates \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create spring user and group
@@ -94,7 +101,7 @@ ENV PLAYWRIGHT_BROWSERS_PATH=/home/spring/.cache/ms-playwright \
 
 EXPOSE 6060
 
-# Health check (optional but recommended)
+# Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD curl -f http://localhost:6060/actuator/health || exit 1
 
