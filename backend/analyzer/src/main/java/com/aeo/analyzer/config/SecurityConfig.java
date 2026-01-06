@@ -1,6 +1,5 @@
 package com.aeo.analyzer.config;
 
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -15,19 +14,25 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
-import java.util.List;
 
 @Slf4j
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
+    // ✅ Environment variables from .env file
+    @Value("${app.frontend.url:http://localhost:2000}")
+    private String frontendUrl;
+
+    @Value("${app.public.ip:localhost}")
+    private String publicIp;
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         log.info("Configuring Security Filter Chain...");
 
         http
-                // CSRF Disable (REST API )
+                // CSRF Disable (REST API)
                 .csrf(csrf -> csrf.disable())
 
                 // CORS Enable
@@ -44,25 +49,20 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                // Security Headers (Merged from WebConfig)
+                // Security Headers
                 .headers(headers -> headers
-                                .xssProtection(xss -> xss
-                                        .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)
-                                )
-                                .frameOptions(frame -> frame.deny()) // Clickjacking protection
-                                .contentSecurityPolicy(csp -> csp
-                                        .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; frame-src 'none'")
-                                )
-
+                        .xssProtection(xss -> xss
+                                .headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK)
+                        )
+                        .frameOptions(frame -> frame.deny())
+                        .contentSecurityPolicy(csp -> csp
+                                .policyDirectives("default-src 'self'; script-src 'self' 'unsafe-inline'; frame-src 'none'")
+                        )
                 );
 
-        log.info("Security configuration completed");
+        log.info("✅ Security configuration completed");
         return http.build();
     }
-
-
-    @Value("${app.frontend.url:http://localhost:2000}")
-    private String frontendUrl;
 
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
@@ -71,7 +71,10 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:3000",
                 "http://localhost:2000",
-                frontendUrl
+                "http://localhost:5173",
+                frontendUrl,                    // From .env: http://44.196.225.69:2000
+                "http://" + publicIp + ":2000", // http://44.196.225.69:2000
+                "http://" + publicIp            // http://44.196.225.69
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -81,8 +84,9 @@ public class SecurityConfig {
         configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-
         source.registerCorsConfiguration("/**", configuration);
+
+        log.info("✅ CORS configured with origins: {}", configuration.getAllowedOrigins());
 
         return source;
     }
