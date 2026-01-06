@@ -2,10 +2,11 @@ package com.aeo.analyzer.service;
 
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.WaitUntilState;
-import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -15,9 +16,11 @@ import java.net.UnknownHostException;
 import java.util.List;
 import java.util.Random;
 
-@Slf4j
 @Service
 public class WebScraperService {
+
+    // Standard SLF4J Logger replacement for @Slf4j
+    private static final Logger log = LoggerFactory.getLogger(WebScraperService.class);
 
     // Constants
     private static final int MAX_CONTENT_LENGTH = 80000;
@@ -42,8 +45,6 @@ public class WebScraperService {
 
     private final Random random = new Random();
 
-    // Main method to scrape URL content
-
     public String scrapeUrl(String url) throws IOException {
         validateUrl(url);
 
@@ -57,8 +58,6 @@ public class WebScraperService {
         }
     }
 
-    // Extract title from URL
-
     public String extractTitleFromUrl(String url) {
         try {
             return Jsoup.connect(url)
@@ -71,9 +70,6 @@ public class WebScraperService {
             return DEFAULT_TITLE;
         }
     }
-
-
-    // Execute scraping using Playwright
 
     private String executePlaywright(String url) {
         try (Playwright playwright = Playwright.create();
@@ -98,8 +94,6 @@ public class WebScraperService {
         }
     }
 
-    // Launch Playwright browser with options
-
     private Browser launchBrowser(Playwright playwright) {
         return playwright.chromium().launch(new BrowserType.LaunchOptions()
                 .setHeadless(true)
@@ -112,8 +106,6 @@ public class WebScraperService {
                 )));
     }
 
-    // Create browser context with user agent
-
     private BrowserContext createBrowserContext(Browser browser) {
         BrowserContext context = browser.newContext(new Browser.NewContextOptions()
                 .setUserAgent(getRandomUserAgent())
@@ -122,8 +114,6 @@ public class WebScraperService {
         context.setDefaultTimeout(PLAYWRIGHT_TIMEOUT);
         return context;
     }
-
-    // Wait to avoid bot detection
 
     private void waitToAvoidBotDetection() {
         try {
@@ -134,16 +124,12 @@ public class WebScraperService {
         }
     }
 
-    // Check if page is blocked by Cloudflare
-
     private void checkForCloudflareProtection(Page page) {
         String title = page.title();
         if (title != null && (title.contains("Just a moment") || title.contains("Security Check"))) {
             throw new IllegalStateException("Blocked by Cloudflare protection");
         }
     }
-
-    // Extract content from page using selectors
 
     private String extractPageContent(Page page) {
         if (page.locator(ARTICLE_TAG).count() > 0) {
@@ -154,8 +140,6 @@ public class WebScraperService {
         }
         return page.locator(BODY_TAG).innerText();
     }
-
-    // Scrape using Jsoup as fallback
 
     private String scrapeWithJsoup(String url) throws IOException {
         log.info("Attempting Jsoup scraping for: {}", url);
@@ -173,13 +157,9 @@ public class WebScraperService {
         return cleanText(text);
     }
 
-    // Remove unwanted HTML elements
-
     private void removeUnwantedElements(Document doc) {
         doc.select("script, style, noscript, nav, header, footer, aside, .ad").remove();
     }
-
-    // Clean and truncate text
 
     private String cleanText(String text) {
         if (text == null || text.isBlank()) {
@@ -194,8 +174,6 @@ public class WebScraperService {
 
         return cleaned;
     }
-
-    // Validate URL structure and security
 
     private void validateUrl(String urlString) throws IOException {
         try {
@@ -213,8 +191,6 @@ public class WebScraperService {
             throw new IOException("Invalid URL structure: " + urlString, e);
         }
     }
-
-    // Get random user agent from pool
 
     private String getRandomUserAgent() {
         return USER_AGENTS[random.nextInt(USER_AGENTS.length)];

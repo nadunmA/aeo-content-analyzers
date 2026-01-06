@@ -1,6 +1,7 @@
 package com.aeo.analyzer.config;
 
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -15,12 +16,14 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 
-@Slf4j
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // ✅ Environment variables from .env file
+    // Standard SLF4J Logger replacement for @Slf4j
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
+    // Environment variables from .env file
     @Value("${app.frontend.url:http://localhost:2000}")
     private String frontendUrl;
 
@@ -72,9 +75,9 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:2000",
                 "http://localhost:5173",
-                frontendUrl,                    // From .env: http://44.196.225.69:2000
-                "http://" + publicIp + ":2000", // http://44.196.225.69:2000
-                "http://" + publicIp            // http://44.196.225.69
+                frontendUrl,                    // From .env
+                "http://" + publicIp + ":2000",
+                "http://" + publicIp
         ));
 
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));

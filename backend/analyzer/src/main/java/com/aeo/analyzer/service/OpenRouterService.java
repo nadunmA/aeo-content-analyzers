@@ -3,7 +3,8 @@ package com.aeo.analyzer.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -13,9 +14,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
 @Service
 public class OpenRouterService {
+
+    // Standard SLF4J Logger replacement for @Slf4j
+    private static final Logger log = LoggerFactory.getLogger(OpenRouterService.class);
 
     @Value("${openrouter.api.key}")
     private String apiKey;
@@ -33,42 +36,41 @@ public class OpenRouterService {
         try {
             log.info("🔄 Calling OpenRouter model: {}", modelName);
 
-
             String safeContent = content.replace("\"", "'");
             if (safeContent.length() > 20000) {
                 safeContent = safeContent.substring(0, 20000);
             }
 
             String prompt = String.format("""
-    You are an expert AEO (Answer Engine Optimization) Auditor.
-    Analyze the provided content and return a HIGHLY DETAILED analysis in valid JSON format.
+                You are an expert AEO (Answer Engine Optimization) Auditor.
+                Analyze the provided content and return a HIGHLY DETAILED analysis in valid JSON format.
 
-    CRITICAL INSTRUCTIONS:
-    1. 'status' MUST be lowercase: passed | warning | failed.
-    2. 'suggestions' array MUST contain specific, actionable advice.
-    3. Each suggestion MUST have a clear 'title' and a 2-3 sentence 'description' explaining HOW to fix it.
-    4. If no code is applicable, set 'codeSnippet' to "".
+                CRITICAL INSTRUCTIONS:
+                1. 'status' MUST be lowercase: passed | warning | failed.
+                2. 'suggestions' array MUST contain specific, actionable advice.
+                3. Each suggestion MUST have a clear 'title' and a 2-3 sentence 'description' explaining HOW to fix it.
+                4. If no code is applicable, set 'codeSnippet' to "".
 
-    CONTENT:
-    "%s"
+                CONTENT:
+                "%s"
 
-    REQUIRED JSON STRUCTURE:
-    {
-      "score": { "overall": 85, "structure": 80, "readability": 90, "seo": 85 },
-      "audits": [
-        { "title": "Schema", "label": "Schema", "status": "failed", "score": 0, "description": "No valid Schema.org markup was detected on the page." }
-      ],
-      "suggestions": [
-        {
-          "type": "STRUCTURE",
-          "title": "Add FAQ Schema",
-          "description": "To improve visibility in AI-driven search results, implement JSON-LD FAQ schema for your 'Programming Basics' section. This helps search engines parse your questions and answers directly.",
-          "codeSnippet": "<script type='application/ld+json'>...</script>"
-        }
-      ],
-      "comparison": { "topRanking": 92, "industryAverage": 68 }
-    }
-    """, safeContent);
+                REQUIRED JSON STRUCTURE:
+                {
+                  "score": { "overall": 85, "structure": 80, "readability": 90, "seo": 85 },
+                  "audits": [
+                    { "title": "Schema", "label": "Schema", "status": "failed", "score": 0, "description": "No valid Schema.org markup was detected on the page." }
+                  ],
+                  "suggestions": [
+                    {
+                      "type": "STRUCTURE",
+                      "title": "Add FAQ Schema",
+                      "description": "To improve visibility in AI-driven search results, implement JSON-LD FAQ schema for your 'Programming Basics' section. This helps search engines parse your questions and answers directly.",
+                      "codeSnippet": "<script type='application/ld+json'>...</script>"
+                    }
+                  ],
+                  "comparison": { "topRanking": 92, "industryAverage": 68 }
+                }
+                """, safeContent);
 
             Map<String, Object> body = new HashMap<>();
             body.put("model", modelName);
@@ -82,10 +84,8 @@ public class OpenRouterService {
             HttpEntity<Map<String, Object>> entity = new HttpEntity<>(body, headers);
             ResponseEntity<String> response = restTemplate.postForEntity(API_URL, entity, String.class);
 
-
             String rawText = extractText(response.getBody());
             String cleanedJson = cleanMarkdown(rawText);
-
 
             objectMapper.readTree(cleanedJson);
 
@@ -104,14 +104,11 @@ public class OpenRouterService {
     private String cleanMarkdown(String text) {
         if (text == null || text.trim().isEmpty()) return "{}";
 
-
         String cleaned = text.trim();
-
 
         cleaned = cleaned.replace("```json", "")
                 .replace("```", "")
                 .trim();
-
 
         int start = cleaned.indexOf('{');
         int end = cleaned.lastIndexOf('}');

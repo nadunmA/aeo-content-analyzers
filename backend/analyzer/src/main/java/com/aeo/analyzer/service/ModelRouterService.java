@@ -1,5 +1,7 @@
 package com.aeo.analyzer.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -8,9 +10,13 @@ import org.springframework.stereotype.Service;
 public class ModelRouterService {
 
     private static final Logger log = LoggerFactory.getLogger(ModelRouterService.class);
-
     private final GeminiService geminiService;
     private final OpenRouterService openRouterService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+
+    private static final int MAX_RETRIES = 2;
+    private static final int RETRY_DELAY_MS = 2000;
 
     public ModelRouterService(GeminiService geminiService, OpenRouterService openRouterService) {
         this.geminiService = geminiService;
@@ -18,92 +24,59 @@ public class ModelRouterService {
     }
 
     public String analyzeWithFailover(String text) {
+        String res;
 
-        // First: Use Gemini
-        try {
-            log.info("🚀 [1/4] Attempting Primary Model: Gemini (Google Direct)...");
-            String result = geminiService.analyzeContent(text);
+        // 1. Gemini (Primary with Retry)
+        res = tryWithRetry("Gemini", () -> geminiService.analyzeContent(text));
+        if (isValid(res)) return injectModelInfo(res, "Gemini (Google)");
 
-            if (result != null && !result.trim().isEmpty()) {
-                log.info("✅ Gemini succeeded");
-                return result;
-            }
-            log.warn("⚠️ Gemini returned empty response");
+        // 2. Claude (Backup 1 with Retry)
+        res = tryWithRetry("Claude", () -> openRouterService.analyzeContent(text, "anthropic/claude-3.5-sonnet"));
+        if (isValid(res)) return injectModelInfo(res, "Claude 3.5 Sonnet");
 
-        } catch (Exception e) {
-            log.error("❌ Gemini Failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
-        }
+        // 3. GPT Fallback (Backup 2 with Retry)
+        res = tryWithRetry("GPT-4o-mini", () -> openRouterService.analyzeContent(text, "openai/gpt-4o-mini"));
+        if (isValid(res)) return injectModelInfo(res, "GPT-4o-mini");
 
-        // Second: Use Claude 3 Haiku
-        try {
-            log.info("🛡️ [2/4] Trying Backup 1: Claude 3 Haiku...");
-            // Second: Use Claude 3.5 Sonnet
-            String result = openRouterService.analyzeContent(text, "anthropic/claude-3.5-sonnet");
-
-            if (result != null && !result.trim().isEmpty()) {
-                log.info("✅ Claude 3 Haiku succeeded");
-                return result;
-            }
-            log.warn("⚠️ Claude returned empty response");
-
-        } catch (Exception e) {
-            log.error("❌ Claude Failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
-        }
-
-        // Third: Use GPT-4o-mini
-       try {
-            log.info("🛡️ [3/4] Trying Backup 2: GPT-4o-mini...");
-            String result = openRouterService.analyzeContent(text, "deepseek/deepseek-chat");
-
-            if (result != null && !result.trim().isEmpty()) {
-                log.info("✅ GPT-4o-mini succeeded");
-                return result;
-            }
-            log.warn("⚠️ GPT-4o-mini returned empty response");
-
-        } catch (Exception e) {
-            log.error("❌ GPT-4o-mini Failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
-        }
-
-        // Fourth: Use DeepSeek
-       try {
-            log.info("🛡️ [4/4] Trying Last Resort: DeepSeek V3...");
-            String result = openRouterService.analyzeContent(text, "deepseek/deepseek-chat");
-
-            if (result != null && !result.trim().isEmpty()) {
-                log.info("✅ DeepSeek succeeded");
-                return result;
-            }
-            log.warn("⚠️ DeepSeek returned empty response");
-
-        } catch (Exception e) {
-            log.error("❌ DeepSeek Failed: {} - {}", e.getClass().getSimpleName(), e.getMessage());
-        }
-        // All failed
-        log.error("❌ CRITICAL: All 4 AI Models Failed!");
         return getErrorJson();
     }
 
-    private String getErrorJson() {
-        return """
-            {
-              "score": {
-                "total": 0,
-                "seo": 0,
-                "readability": 0,
-                "technical": 0
-              },
-              "audits": [{
-                "title": "System Unavailable",
-                "status": "fail",
-                "description": "All AI services (Gemini, Claude, GPT, DeepSeek) are currently unresponsive. Please try again later."
-              }],
-              "suggestions": [],
-              "comparison": {
-                "topRanking": 0,
-                "industryAverage": 0
-              }
+
+    private String tryWithRetry(String modelName, AIRequestBuilder request) {
+        for (int i = 0; i < MAX_RETRIES; i++) {
+            try {
+                log.info("🚀 Attempting {} (Try {}/{})...", modelName, (i + 1), MAX_RETRIES);
+                String result = request.execute();
+                if (isValid(result)) return result;
+            } catch (Exception e) {
+                log.error("❌ {} failed on try {}: {}", modelName, (i + 1), e.getMessage());
+                if (i < MAX_RETRIES - 1) {
+                    try { Thread.sleep(RETRY_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
+                }
             }
-            """;
+        }
+        return null;
+    }
+
+    private boolean isValid(String res) {
+        return res != null && !res.trim().isEmpty() && res.contains("{");
+    }
+
+    private String injectModelInfo(String json, String modelName) {
+        try {
+            ObjectNode node = (ObjectNode) objectMapper.readTree(json);
+            node.put("model_info", modelName);
+            return node.toString();
+        } catch (Exception e) { return json; }
+    }
+
+    private String getErrorJson() {
+        return "{\"score\":{\"overall\":0},\"audits\":[{\"title\":\"System Unavailable\",\"status\":\"fail\",\"description\":\"All AI models failed after multiple retries. Please check your internet or API limits.\"}]}";
+    }
+
+    // Functional Interface for Retries
+    @FunctionalInterface
+    interface AIRequestBuilder {
+        String execute() throws Exception;
     }
 }
