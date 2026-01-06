@@ -50,7 +50,7 @@ const History = ({ onView, onBack }) => {
     fetchHistory();
   }, [currentPage]);
 
-  // Delete logic
+  // Delete logicc
   const handleDelete = async (e, id) => {
     e.stopPropagation();
     if (!globalThis.confirm("Are you sure you want to delete this report?"))
