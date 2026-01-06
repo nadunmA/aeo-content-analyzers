@@ -23,7 +23,9 @@ const History = ({ onView, onBack }) => {
       setIsLoading(true);
       try {
         const response = await fetch(
-          `http://localhost:6060/api/v1/content/history?page=${currentPage}&size=12`
+          `${
+            import.meta.env.VITE_API_BASE_URL
+          }/api/v1/content/history?page=${currentPage}&size=12`
         );
 
         if (!response.ok) {
@@ -56,7 +58,7 @@ const History = ({ onView, onBack }) => {
 
     try {
       const response = await fetch(
-        `http://localhost:6060/api/v1/content/report/${id}`,
+        `${import.meta.env.VITE_API_BASE_URL}/api/v1/content/report/${id}`,
         { method: "DELETE" }
       );
 
