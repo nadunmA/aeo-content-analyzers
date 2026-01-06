@@ -12,7 +12,7 @@ RUN mvn clean package -DskipTests
 
 # Install Playwright browsers in a known location
 ENV PLAYWRIGHT_BROWSERS_PATH=/playwright-browsers
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
     libgbm1 \
     libnss3 \
     libnspr4 \
@@ -43,7 +43,7 @@ FROM eclipse-temurin:17-jre
 WORKDIR /app
 
 # Install ALL required Chromium dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN apt-get update --fix-missing && apt-get install -y --no-install-recommends \
     libgbm1 \
     libnss3 \
     libnspr4 \
