@@ -8,12 +8,8 @@ COPY package.json package-lock.json ./
 # Install dependencies
 RUN npm ci --silent
 
-# Copy source code
+# Copy source codes
 COPY . .
-
-
-
-
 
 ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
