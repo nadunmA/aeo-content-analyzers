@@ -25,7 +25,12 @@ import java.util.*;
 @RequestMapping("/api/v1/content")
 @RequiredArgsConstructor
 @CrossOrigin(
-        origins = {"http://localhost:3000", "http://localhost:5173", "http://localhost:2000"},
+        origins = {"http://localhost:3000",
+                "http://localhost:5173",
+                "http://localhost:2000",
+                "${app.frontend.url}",  // From .env
+                "http://${app.public.ip}:2000",
+                "http://${app.public.ip}"},
         methods = {RequestMethod.POST, RequestMethod.GET, RequestMethod.DELETE},
         allowedHeaders = "*",
         allowCredentials = "true"
