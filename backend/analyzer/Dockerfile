@@ -1,7 +1,8 @@
 # =========================
 # Stage 1: Build stage
 # =========================
-FROM maven:3.9.9-eclipse-temurin-17 AS build
+# Ubuntu Jammy පදනම් කරගත් ස්ථාවර Maven image එකක් පාවිච්චි කිරීම
+FROM maven:3.9.9-eclipse-temurin-17-jammy AS build
 
 WORKDIR /app
 
@@ -16,17 +17,18 @@ RUN mvn clean package -DskipTests
 # Install Playwright browser dependencies
 ENV PLAYWRIGHT_BROWSERS_PATH=/playwright-browsers
 
-# ✅ Ubuntu Repositories fix using Mirrors (Mirror සර්වර් යොදාගෙන 404 error එක විසඳීම)
-RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
+# ✅ Ubuntu Repositories ස්ථිරවම නිවැරදි කිරීම (Mirror Fix)
+RUN sed -i 's|http://.*archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
     sed -i 's|http://security.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' /etc/apt/sources.list && \
     apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     libgbm1 \
     libnss3 \
     libnspr4 \
-    libasound2t64 \
-    libatk1.0-0t64 \
-    libatk-bridge2.0-0t64 \
-    libcups2t64 \
+    libasound2 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
     libdrm2 \
     libxkbcommon0 \
     libxcomposite1 \
@@ -37,10 +39,9 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|
     libxfixes3 \
     fonts-liberation \
     libxshmfence1 \
-    ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Chromium via Playwright (Dependencies අතින් දාපු නිසා මෙතැනදී chromium පමණක් දාන්න)
+# Install Chromium via Playwright
 RUN mvn exec:java \
     -Dexec.mainClass=com.microsoft.playwright.CLI \
     -Dexec.args="install chromium"
@@ -49,14 +50,17 @@ RUN mvn exec:java \
 # =========================
 # Stage 2: Production stage
 # =========================
+# වඩාත් ස්ථාවර Ubuntu Jammy JRE පාවිච්චි කිරීම
 FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
-# ✅ Production Stage එක සඳහාත් Mirrors සහ නිවැරදි පැකේජ නම් යොදාගැනීම
-RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
+# Install Chromium runtime dependencies
+RUN sed -i 's|http://.*archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
     sed -i 's|http://security.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' /etc/apt/sources.list && \
     apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
     libgbm1 \
     libnss3 \
     libnspr4 \
@@ -79,8 +83,6 @@ RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|
     libx11-6 \
     libxext6 \
     libxrender1 \
-    ca-certificates \
-    curl \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user
@@ -90,10 +92,10 @@ RUN addgroup --system spring && \
 # Copy application JAR
 COPY --from=build /app/target/*.jar app.jar
 
-# Copy Playwright browsers (Permissions නිවැරදිව ලබා දීම)
+# Copy Playwright browsers
 COPY --from=build --chown=spring:spring /playwright-browsers /home/spring/.cache/ms-playwright
 
-# Permissions
+# Set permissions
 RUN chown -R spring:spring /app /home/spring
 
 USER spring
