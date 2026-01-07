@@ -1,9 +1,6 @@
 version: "3.8"
 
 services:
-  # ═══════════════════════════════════════════════════════════════
-  # Backend - Spring Boot Application
-  # ═══════════════════════════════════════════════════════════════
   backend:
     build:
       context: ./backend/analyzer
@@ -18,33 +15,15 @@ services:
       APP_USERNAME: ${APP_USERNAME:-admin}
       APP_PASSWORD: ${APP_PASSWORD:-admin123}
       SERVER_PORT: 6060
-      # ✅ CORS Configuration - ADD THESE
       FRONTEND_URL: ${FRONTEND_URL}
       PUBLIC_IP: ${PUBLIC_IP}
-      APP_FRONTEND_URL: ${FRONTEND_URL}
-      APP_PUBLIC_IP: ${PUBLIC_IP}
-      JAVA_OPTS: "-Xms512m -Xmx2048m"
-      # Prometheus metrics endpoint
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: true
     ports:
       - "6060:6060"
     networks:
       - aeo-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:6060/actuator/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 60s
-    labels:
-      - "prometheus.scrape=true"
-      - "prometheus.port=6060"
-      - "prometheus.path=/actuator/prometheus"
 
-  # ═══════════════════════════════════════════════════════════════
-  # Frontend - React/Vite with Nginx
-  # ═══════════════════════════════════════════════════════════════
   frontend:
     build:
       context: ./frontend
@@ -55,21 +34,11 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
-
     depends_on:
       - backend
     networks:
       - aeo-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
 
-  # ═══════════════════════════════════════════════════════════════
-  # Prometheus - Metrics Collection
-  # ═══════════════════════════════════════════════════════════════
   prometheus:
     image: prom/prometheus:latest
     container_name: aeo-prometheus
@@ -77,8 +46,7 @@ services:
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=7d'
-      - '--web.external-url=https://aeo-analyzer.works/prometheus/'
+      - '--web.external-url=https://prometheus.aeo-analyzer.works/'
       - '--web.route-prefix=/'
     ports:
       - "9090:9090"
@@ -87,17 +55,7 @@ services:
       - ./prometheus/data:/prometheus
     networks:
       - aeo-network
-    depends_on:
-      - backend
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
 
-  # ═══════════════════════════════════════════════════════════════
-  # Grafana - Visualization Dashboard
-  # ═══════════════════════════════════════════════════════════════
   grafana:
     image: grafana/grafana:latest
     container_name: aeo-grafana
@@ -106,9 +64,8 @@ services:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=${APP_PASSWORD:-admin123}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=https://aeo-analyzer.works/grafana/
-      - GF_SERVER_SERVE_FROM_SUB_PATH=true
-      - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_SERVER_ROOT_URL=https://grafana.aeo-analyzer.works/
+      - GF_SERVER_SERVE_FROM_SUB_PATH=false
       - GF_SERVER_PROTOCOL=http
     ports:
       - "3000:3000"
@@ -119,15 +76,7 @@ services:
       - aeo-network
     depends_on:
       - prometheus
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
 
 networks:
   aeo-network:
     driver: bridge
-    ipam:
-      config:
-        - subnet: 172.20.0.0/16
