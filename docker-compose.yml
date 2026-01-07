@@ -19,23 +19,30 @@ services:
       PUBLIC_IP: ${PUBLIC_IP}
       MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE: health,info,prometheus,metrics
       MANAGEMENT_METRICS_EXPORT_PROMETHEUS_ENABLED: true
-    ports:
-      - "6060:6060"
+    # ⚠️ Backend expose කරන්න එපා externally (security)
+    expose:
+      - "6060"
     networks:
       - aeo-network
 
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - VITE_API_BASE_URL=${VITE_API_BASE_URL}
-    container_name: aeo-frontend
+  nginx:
+    image: nginx:alpine
+    container_name: aeo-nginx
     restart: unless-stopped
     ports:
       - "80:80"
+      # - "443:443"  # SSL සඳහා (future)
+    volumes:
+      # Frontend build files
+      - ./frontend/dist:/usr/share/nginx/html:ro
+      # Nginx configuration
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      # SSL certificates (future)
+      # - ./nginx/ssl:/etc/nginx/ssl:ro
     depends_on:
       - backend
+      - grafana
+      - prometheus
     networks:
       - aeo-network
 
@@ -48,8 +55,8 @@ services:
       - '--storage.tsdb.path=/prometheus'
       - '--web.external-url=https://prometheus.aeo-analyzer.works/'
       - '--web.route-prefix=/'
-    ports:
-      - "9090:9090"
+    expose:
+      - "9090"
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./prometheus/data:/prometheus
@@ -67,8 +74,8 @@ services:
       - GF_SERVER_ROOT_URL=https://grafana.aeo-analyzer.works/
       - GF_SERVER_SERVE_FROM_SUB_PATH=false
       - GF_SERVER_PROTOCOL=http
-    ports:
-      - "3000:3000"
+    expose:
+      - "3000"
     volumes:
       - ./grafana/data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
