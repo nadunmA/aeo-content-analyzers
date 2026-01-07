@@ -6,7 +6,9 @@ global:
 
   external_labels:
     cluster: 'aeo-analyzer'
-    environment: 'demo'
+    environment:
+    - GF_SERVER_ROOT_URL=https://aeo-analyzer.works/grafana/
+    - GF_SERVER_SERVE_FROM_SUB_PATH=true
 
 # Alerting configuration (optional)
 alerting:
