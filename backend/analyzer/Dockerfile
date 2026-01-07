@@ -1,8 +1,8 @@
 # =========================
 # Stage 1: Build stage
 # =========================
-# Ubuntu Jammy පදනම් කරගත් ස්ථාවර Maven image එකක් පාවිච්චි කිරීම
-FROM maven:3.9.9-eclipse-temurin-17-jammy AS build
+# නිවැරදි Docker Tag එක: maven:3.9.9-eclipse-temurin-17
+FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
 
@@ -17,18 +17,17 @@ RUN mvn clean package -DskipTests
 # Install Playwright browser dependencies
 ENV PLAYWRIGHT_BROWSERS_PATH=/playwright-browsers
 
-# ✅ Ubuntu Repositories ස්ථිරවම නිවැරදි කිරීම (Mirror Fix)
-RUN sed -i 's|http://.*archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
     sed -i 's|http://security.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' /etc/apt/sources.list && \
     apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     libgbm1 \
     libnss3 \
     libnspr4 \
-    libasound2 \
-    libatk1.0-0 \
-    libatk-bridge2.0-0 \
-    libcups2 \
+    libasound2t64 \
+    libatk1.0-0t64 \
+    libatk-bridge2.0-0t64 \
+    libcups2t64 \
     libdrm2 \
     libxkbcommon0 \
     libxcomposite1 \
@@ -50,13 +49,12 @@ RUN mvn exec:java \
 # =========================
 # Stage 2: Production stage
 # =========================
-# වඩාත් ස්ථාවර Ubuntu Jammy JRE පාවිච්චි කිරීම
 FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
 # Install Chromium runtime dependencies
-RUN sed -i 's|http://.*archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
+RUN sed -i 's|http://archive.ubuntu.com/ubuntu/|http://mirror.kakao.com/ubuntu/|g' /etc/apt/sources.list && \
     sed -i 's|http://security.ubuntu.com/ubuntu|http://mirror.kakao.com/ubuntu|g' /etc/apt/sources.list && \
     apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
