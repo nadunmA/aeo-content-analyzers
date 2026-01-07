@@ -109,6 +109,7 @@ services:
       - GF_SERVER_ROOT_URL=https://aeo-analyzer.works/grafana/
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       - GF_INSTALL_PLUGINS=grafana-clock-panel,grafana-simple-json-datasource
+      - GF_SERVER_PROTOCOL=http
     ports:
       - "3000:3000"
     volumes:
