@@ -1,4 +1,3 @@
-# Grafana Datasource Configuration
 apiVersion: 1
 
 datasources:
@@ -10,5 +9,3 @@ datasources:
     editable: true
     jsonData:
       timeInterval: "15s"
-      httpMethod: "POST"
-    version: 1

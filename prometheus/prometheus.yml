@@ -1,14 +1,29 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    monitor: 'aeo-analyzer'
 
 scrape_configs:
-  - job_name: 'prometheus'
+  # Node Exporter (System Metrics)
+  - job_name: 'node-exporter'
     static_configs:
-      - targets: ['localhost:9090']
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'aeo-ec2'
+          environment: 'production'
 
-  - job_name: 'spring-boot-backend'
+  # Spring Boot Backend
+  - job_name: 'spring-boot'
     metrics_path: '/actuator/prometheus'
-    scrape_interval: 10s
     static_configs:
-      - targets: ['backend:6060']
+      - targets: ['aeo-backend:6060'] 
+        labels:
+          application: 'aeo-backend'
+
+  # Frontend
+  - job_name: 'frontend'
+    static_configs:
+      - targets: ['aeo-frontend:80'] 
+        labels:
+          application: 'aeo-frontend'
