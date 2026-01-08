@@ -17,7 +17,7 @@ import java.util.Map;
 @Service
 public class OpenRouterService {
 
-    // Standard SLF4J Logger replacement for @Slf4j
+
     private static final Logger log = LoggerFactory.getLogger(OpenRouterService.class);
 
     @Value("${openrouter.api.key}")
@@ -89,14 +89,14 @@ public class OpenRouterService {
 
             objectMapper.readTree(cleanedJson);
 
-            log.info("✅ Successfully analyzed with model: {}", modelName);
+            log.info("Successfully analyzed with model: {}", modelName);
             return cleanedJson;
 
         } catch (JsonProcessingException e) {
-            log.error("❌ AI Response is not a valid JSON: {}", e.getMessage());
+            log.error("AI Response is not a valid JSON: {}", e.getMessage());
             throw new IllegalStateException("AI returned invalid JSON structure", e);
         } catch (Exception e) {
-            log.error("❌ OpenRouter service error: {}", e.getMessage(), e);
+            log.error("OpenRouter service error: {}", e.getMessage(), e);
             throw new IllegalStateException("AI analysis service failed", e);
         }
     }

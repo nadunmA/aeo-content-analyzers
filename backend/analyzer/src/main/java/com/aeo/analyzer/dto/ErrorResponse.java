@@ -12,19 +12,18 @@ public class ErrorResponse {
     private LocalDateTime timestamp;
     private Map<String, String> details;
 
-    // 1. Default No-args constructor (Lombok @NoArgsConstructor වෙනුවට)
+
     public ErrorResponse() {
         this.timestamp = LocalDateTime.now();
     }
 
-    // 2. Custom constructor for basic errors
     public ErrorResponse(String errorCode, String message) {
         this.errorCode = errorCode;
         this.message = message;
         this.timestamp = LocalDateTime.now();
     }
 
-    // 3. All-args constructor (Lombok @AllArgsConstructor වෙනුවට)
+
     public ErrorResponse(String errorCode, String message, LocalDateTime timestamp, Map<String, String> details) {
         this.errorCode = errorCode;
         this.message = message;
@@ -32,7 +31,6 @@ public class ErrorResponse {
         this.details = details;
     }
 
-    // 4. Constructor with details
     public ErrorResponse(String errorCode, String message, Map<String, String> details) {
         this.errorCode = errorCode;
         this.message = message;
@@ -40,7 +38,6 @@ public class ErrorResponse {
         this.timestamp = LocalDateTime.now();
     }
 
-    // 5. Getters and Setters (Lombok @Data වෙනුවට)
 
     public String getErrorCode() {
         return errorCode;

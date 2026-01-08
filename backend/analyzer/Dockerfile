@@ -1,7 +1,4 @@
-# =========================
-# Stage 1: Build stage
-# =========================
-# නිවැරදි Docker Tag එක: maven:3.9.9-eclipse-temurin-17
+# Build stage
 FROM maven:3.9.9-eclipse-temurin-17 AS build
 
 WORKDIR /app
@@ -46,9 +43,8 @@ RUN mvn exec:java \
     -Dexec.args="install chromium"
 
 
-# =========================
-# Stage 2: Production stage
-# =========================
+
+# Production stage
 FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app

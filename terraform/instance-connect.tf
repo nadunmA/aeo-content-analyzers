@@ -1,4 +1,4 @@
-# EC2 Instance Connect Endpoint (Secure SSH without opening port 22)
+# EC2 Instance Connect Endpoint
 
 # Security Group for Instance Connect Endpoint
 resource "aws_security_group" "instance_connect" {
