@@ -22,7 +22,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/content")
-@CrossOrigin(origins = "*") // සරල බව සඳහා දැනට මෙසේ යොදා ඇත
+@CrossOrigin(origins = "*")
 public class ContentController {
 
     private static final Logger log = LoggerFactory.getLogger(ContentController.class);
@@ -59,18 +59,17 @@ public class ContentController {
             String contentToAnalyze = extractContent(request, type);
             String title = extractTitle(request, type);
 
-            // AI විශ්ලේෂණය ලබා ගැනීම
+
             String aiRaw = modelRouterService.analyzeWithFailover(contentToAnalyze);
             Map<String, Object> result = parseAiResponse(aiRaw);
 
-            // AI Model එකේ නම ලබා ගැනීම
+
             String modelInfo = (String) result.getOrDefault("model_info", "AI Model");
 
             processAuditsAndScores(result);
 
             AuditReport report = createReportObject(request, result, type, title, clientIp);
 
-            // Model එකේ නම Report එකට ඇතුළත් කිරීම
             report.setModelUsed(modelInfo);
 
             AuditReport saved = repository.save(report);

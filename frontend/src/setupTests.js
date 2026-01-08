@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 
-// 1. Mock matchMedia
+// Mock matchMedia
 Object.defineProperty(globalThis, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation(query => ({
@@ -16,7 +16,7 @@ Object.defineProperty(globalThis, 'matchMedia', {
   })),
 });
 
-// 2. Mock IntersectionObserverss
+// Mock IntersectionObserverss
 class IntersectionObserverMock {
   constructor() {
     this.observe = vi.fn();
@@ -27,7 +27,7 @@ class IntersectionObserverMock {
 }
 vi.stubGlobal('IntersectionObserver', IntersectionObserverMock);
 
-// 3. Mock localStorage
+// Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
@@ -36,7 +36,7 @@ const localStorageMock = {
 };
 globalThis.localStorage = localStorageMock;
 
-// 4. Mock fetch (Updated to handle .json() calls) ✅
+// Mock fetch (Updated to handle .json() calls)
 globalThis.fetch = vi.fn(() =>
   Promise.resolve({
     ok: true,

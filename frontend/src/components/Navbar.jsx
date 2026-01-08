@@ -42,7 +42,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
       }`}
     >
       <div className="flex items-center gap-4">
-        {/* Logo - Separate on Left */}
+        {/* Separate on Left */}
         <button
           onClick={() => {
             onNavigate("landing");
@@ -51,7 +51,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
           className="group focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full transition-transform hover:scale-105 active:scale-95 relative"
           aria-label="Go to home page"
         >
-          {/* Rotating Gradient Border - Enhanced */}
+          {/* Rotating Gradient Border */}
           <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-600 via-purple-600 via-pink-500 to-indigo-600 rounded-full opacity-75 blur-lg animate-spin-slow"></div>
 
           {/* Extra glow layer */}
@@ -62,7 +62,7 @@ const Navbar = ({ currentPage, onNavigate }) => {
           </div>
         </button>
 
-        {/* Navigation Bar - Separate on Right */}
+        {/* Navigation Bar */}
         <div
           className={`flex-1 bg-white/80 dark:bg-gray-900/80 backdrop-blur-xl rounded-full border border-gray-200 dark:border-gray-800 px-4 sm:px-6 h-16 flex items-center justify-between transition-all duration-300 ${
             isScrolled

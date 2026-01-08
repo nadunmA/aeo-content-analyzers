@@ -113,7 +113,7 @@ public class GeminiService {
 
     private String executeRequest(String url, HttpEntity<Map<String, Object>> entity) throws IOException {
         try {
-            log.info("🚀 Calling Gemini Direct API...");
+            log.info("Calling Gemini Direct API...");
             ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
             JsonNode root = objectMapper.readTree(response.getBody());
             String responseText = root.path("candidates").path(0).path("content").path("parts").path(0).path("text").asText("");

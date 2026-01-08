@@ -19,7 +19,7 @@ import java.util.Random;
 @Service
 public class WebScraperService {
 
-    // Standard SLF4J Logger replacement for @Slf4j
+
     private static final Logger log = LoggerFactory.getLogger(WebScraperService.class);
 
     // Constants

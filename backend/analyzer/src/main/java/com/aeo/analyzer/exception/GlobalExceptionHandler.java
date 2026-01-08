@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 errors.put(error.getField(), error.getDefaultMessage()));
 
-        log.warn("⚠️ Validation failed: {}", errors);
+        log.warn("Validation failed: {}", errors);
 
         ErrorResponse response = new ErrorResponse(
                 "VALIDATION_ERROR",
@@ -41,7 +41,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralErrors(Exception ex) {
 
-        log.error("❌ Unexpected error occurred: ", ex);
+        log.error("Unexpected error occurred: ", ex);
 
 
         ErrorResponse response = new ErrorResponse(

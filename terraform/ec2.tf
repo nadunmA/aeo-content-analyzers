@@ -1,6 +1,6 @@
 # Elastic IP
 resource "aws_eip" "app" {
-  domain = "vpc"
+  domain   = "vpc"
   instance = aws_instance.app.id
 
   tags = {
@@ -28,7 +28,7 @@ resource "aws_instance" "app" {
     delete_on_termination = true
     encrypted             = true
 
-    # gp3 specific settings (better performance)
+    # gp3 specific settings
     iops       = var.root_volume_type == "gp3" ? 3000 : null
     throughput = var.root_volume_type == "gp3" ? 125 : null
 
@@ -40,14 +40,14 @@ resource "aws_instance" "app" {
   monitoring = var.enable_detailed_monitoring
 
   user_data = base64encode(templatefile("${path.module}/user-data.sh", {
-    project_name      = var.project_name
-    mongodb_uri       = var.mongodb_uri
-    gemini_api_key    = var.gemini_api_key
+    project_name       = var.project_name
+    mongodb_uri        = var.mongodb_uri
+    gemini_api_key     = var.gemini_api_key
     openrouter_api_key = var.openrouter_api_key
-    app_username      = var.app_username
-    app_password      = var.app_password
-    s3_bucket         = aws_s3_bucket.app_data.id
-    aws_region        = var.aws_region
+    app_username       = var.app_username
+    app_password       = var.app_password
+    s3_bucket          = aws_s3_bucket.app_data.id
+    aws_region         = var.aws_region
   }))
 
   metadata_options {

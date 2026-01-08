@@ -26,15 +26,15 @@ public class ModelRouterService {
     public String analyzeWithFailover(String text) {
         String res;
 
-        // 1. Gemini (Primary with Retry)
+        // Gemini (Primary with Retry)
         res = tryWithRetry("Gemini", () -> geminiService.analyzeContent(text));
         if (isValid(res)) return injectModelInfo(res, "Gemini (Google)");
 
-        // 2. Claude (Backup 1 with Retry)
+        // Claude (Backup 1 with Retry)
         res = tryWithRetry("Claude", () -> openRouterService.analyzeContent(text, "anthropic/claude-3.5-sonnet"));
         if (isValid(res)) return injectModelInfo(res, "Claude 3.5 Sonnet");
 
-        // 3. GPT Fallback (Backup 2 with Retry)
+        // GPT Fallback (Backup 2 with Retry)
         res = tryWithRetry("GPT-4o-mini", () -> openRouterService.analyzeContent(text, "openai/gpt-4o-mini"));
         if (isValid(res)) return injectModelInfo(res, "GPT-4o-mini");
 
@@ -45,11 +45,11 @@ public class ModelRouterService {
     private String tryWithRetry(String modelName, AIRequestBuilder request) {
         for (int i = 0; i < MAX_RETRIES; i++) {
             try {
-                log.info("🚀 Attempting {} (Try {}/{})...", modelName, (i + 1), MAX_RETRIES);
+                log.info("Attempting {} (Try {}/{})...", modelName, (i + 1), MAX_RETRIES);
                 String result = request.execute();
                 if (isValid(result)) return result;
             } catch (Exception e) {
-                log.error("❌ {} failed on try {}: {}", modelName, (i + 1), e.getMessage());
+                log.error("{} failed on try {}: {}", modelName, (i + 1), e.getMessage());
                 if (i < MAX_RETRIES - 1) {
                     try { Thread.sleep(RETRY_DELAY_MS); } catch (InterruptedException ie) { Thread.currentThread().interrupt(); }
                 }

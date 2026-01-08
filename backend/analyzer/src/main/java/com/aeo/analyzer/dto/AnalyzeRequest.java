@@ -12,17 +12,15 @@ public class AnalyzeRequest {
     @NotBlank(message = "Type is required")
     private String type; // 'url' or 'text'
 
-    // 1. Default No-args constructor (Lombok @NoArgsConstructor වෙනුවට)
+
     public AnalyzeRequest() {
     }
 
-    // 2. All-args constructor (Lombok @AllArgsConstructor වෙනුවට)
     public AnalyzeRequest(String text, String type) {
         this.text = text;
         this.type = type;
     }
 
-    // 3. Getters and Setters (Lombok @Data වෙනුවට)
 
     public String getText() {
         return text;

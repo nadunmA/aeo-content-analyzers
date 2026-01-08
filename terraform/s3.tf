@@ -3,8 +3,8 @@ resource "aws_s3_bucket" "app_data" {
   bucket = "${var.project_name}-app-data-${data.aws_caller_identity.current.account_id}"
 
   tags = {
-    Name        = "${var.project_name}-app-data"
-    Purpose     = "Application Data Storage"
+    Name    = "${var.project_name}-app-data"
+    Purpose = "Application Data Storage"
   }
 }
 
@@ -29,7 +29,7 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "app_data" {
   }
 }
 
-# Versioning (Optional, costs extra)
+# Versioning
 resource "aws_s3_bucket_versioning" "app_data" {
   bucket = aws_s3_bucket.app_data.id
 
@@ -46,7 +46,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_data" {
     id     = "archive-old-data"
     status = "Enabled"
 
-    filter {}   # 👈 REQUIRED
+    filter {}
 
     transition {
       days          = var.s3_lifecycle_days
@@ -62,7 +62,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "app_data" {
     id     = "delete-incomplete-uploads"
     status = "Enabled"
 
-    filter {}   # 👈 REQUIRED
+    filter {}
 
     abort_incomplete_multipart_upload {
       days_after_initiation = 7

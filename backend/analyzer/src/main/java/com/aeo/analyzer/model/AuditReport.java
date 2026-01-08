@@ -43,7 +43,7 @@ public class AuditReport {
     private String ipAddress;
     private String status;
 
-    // AI Model එකේ නම ගබඩා කිරීමට
+
     private String modelUsed;
 
     public AuditReport() {
@@ -59,7 +59,7 @@ public class AuditReport {
         this.userId = userId;
     }
 
-    // --- GETTERS AND SETTERS ---
+    // Getters & Setters
 
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }

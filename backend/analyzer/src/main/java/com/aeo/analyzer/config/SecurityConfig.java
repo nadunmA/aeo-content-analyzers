@@ -20,10 +20,9 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // Standard SLF4J Logger replacement for @Slf4j
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
-    // Environment variables from .env file
+
     @Value("${app.frontend.url:http://localhost:2000}")
     private String frontendUrl;
 
@@ -35,7 +34,7 @@ public class SecurityConfig {
         log.info("Configuring Security Filter Chain...");
 
         http
-                // CSRF Disable (REST API)
+                // CSRF Disable
                 .csrf(csrf -> csrf.disable())
 
                 // CORS Enable
@@ -63,7 +62,7 @@ public class SecurityConfig {
                         )
                 );
 
-        log.info("✅ Security configuration completed");
+        log.info("Security configuration completed");
         return http.build();
     }
 
@@ -75,7 +74,7 @@ public class SecurityConfig {
                 "http://localhost:3000",
                 "http://localhost:2000",
                 "http://localhost:5173",
-                frontendUrl,                    // From .env
+                frontendUrl,
                 "http://" + publicIp + ":2000",
                 "http://" + publicIp
         ));
@@ -89,7 +88,7 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
-        log.info("✅ CORS configured with origins: {}", configuration.getAllowedOrigins());
+        log.info("CORS configured with origins: {}", configuration.getAllowedOrigins());
 
         return source;
     }
