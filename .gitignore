@@ -214,3 +214,8 @@ junit.xml
 !terraform.tfvars.example
 !docker-compose.yml
 !docker-compose.override.yml.example
+
+.sonarqube/
+sonar-project.properties
+
+.fleet/

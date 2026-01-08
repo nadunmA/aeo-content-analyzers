@@ -153,3 +153,10 @@ junit.xml
 *.tar
 *.tar.gz
 *.rar
+
+# Scripts that shouldn't be in container
+scripts/local-*.sh
+scripts/dev-*.sh
+
+# Local configuration overrides
+config.local.*
