@@ -21,6 +21,7 @@ Evaluate and improve content visibility for ChatGPT & Gemini. A comprehensive fu
 - [Monitoring & Observability](#monitoring--observability)
 - [Deployment](#deployment)
 - [Contributing](#contributing)
+- [Visual Proofs & Dashboards](#-visual-proofs--dashboards)
 - [License](#license)
 
 ## 🎯 Overview
@@ -346,6 +347,39 @@ Contributions are welcome! Please follow these steps:
 - Write unit tests for new features
 - Update documentation as needed
 - Ensure SonarQube quality gates pass
+
+## 🖼 Visual Proofs & Dashboards
+To demonstrate the system's operational and security standards, here are the core dashboards:
+
+### 📊 Real-time Observability (Grafana)
+Comprehensive view of backend/frontend status, CPU utilization, and real-time application logs.
+<img width="1920" height="1080" alt="Screenshot 2026-01-08 at 6 49 09 PM" src="https://github.com/user-attachments/assets/2c53797f-0a71-4c7e-8fa5-49150001ecee" />
+
+### 🛡️ Security & Quality Ratings (SonarQube)
+Achieved 'A' ratings for Security, Reliability, and Maintainability across the codebase.
+![Screenshot_4-1-2026_224320_sonarcloud io](https://github.com/user-attachments/assets/4feb0977-d08d-4c2a-807e-2c6c8573e475)
+
+### ☁️ Infrastructure Monitoring (AWS CloudWatch)
+Detailed monitoring of EC2 performance metrics and network traffic patterns.
+<img width="1920" height="1080" alt="Screenshot 2026-01-08 at 7 29 55 PM" src="https://github.com/user-attachments/assets/07522c9b-a28b-4b5a-b957-c6b50fa7fb8b" />
+<img width="1915" height="1080" alt="Screenshot 2026-01-08 at 7 31 04 PM" src="https://github.com/user-attachments/assets/61e5f641-4d0f-4daa-96eb-befdf050edbf" />
+
+### 📉 Cost Management (AWS Billing)
+Monitoring monthly costs and detecting anomalies to ensure budget adherence.
+<img width="1920" height="1080" alt="Screenshot 2026-01-08 at 7 35 02 PM" src="https://github.com/user-attachments/assets/320580f1-0c41-46ba-b2e8-5431837aea08" />
+
+### 🛡️ Dependency Security & Vulnerability Scanning (Snyk)
+Continuous monitoring and scanning of application dependencies and Docker images to identify and mitigate security vulnerabilities.
+<img width="1920" height="1080" alt="Screenshot 2026-01-08 at 8 05 30 PM" src="https://github.com/user-attachments/assets/88e10a36-df45-4337-b56b-765f4445ecb1" />
+
+### 🍃 Database Performance & Health (MongoDB Atlas)
+Real-time tracking of database operations (Opcounters), active connections, and hardware performance metrics to ensure data reliability.
+<img width="1920" height="1080" alt="Screenshot 2026-01-08 at 7 55 07 PM" src="https://github.com/user-attachments/assets/72ee9be0-0605-4b9a-8b2e-3f95b3c557e0" />
+
+### 🌐 DNS Traffic & Global Analytics (Cloudflare)
+Insights into global traffic patterns and DNS query volumes, providing an additional layer of performance optimization and security.
+<img width="1913" height="1080" alt="Screenshot 2026-01-08 at 7 43 15 PM" src="https://github.com/user-attachments/assets/902fb2e3-a506-4748-ae33-c51a6a5a51b7" />
+
 
 ## 📝 License
 
