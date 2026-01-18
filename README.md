@@ -389,34 +389,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **nadunmA** - *Initial work* - [@nadunmA](https://github.com/nadunmA)
 
-## 🙏 Acknowledgments
-
-- OpenAI for ChatGPT API
-- Google for Gemini API
-- Spring Boot community
-- React community
-- All contributors
-
-## 📞 Support
-
-For support, email your-email@example.com or open an issue in the GitHub repository. 
-
-## 🗺 Roadmap
-
-- [ ] Add support for more AI platforms
-- [ ] Implement batch content analysis
-- [ ] Add collaborative features
-- [ ] Enhance ML-based recommendations
-- [ ] Mobile application
-- [ ] API rate limiting and caching
-- [ ] Multi-language support
-- [ ] Advanced analytics dashboard
-
-## 📈 Project Status
-
-
-Active development - contributions welcome! 
-
 ---
 
 Made with ❤️ by nadunmA
